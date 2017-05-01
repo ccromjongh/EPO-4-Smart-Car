@@ -117,10 +117,18 @@ end
 
 % --- Executes on button press in refresh_com_ports.
 function refresh_com_ports_Callback(hObject, eventdata, handles)
-    [~, queryResult] = dos(['REg QUERY ' 'HKEY_LOCAL_MACHINE\HARDWARE\DEVICEMAP\SERIALCOMM']);
-    serialPorts = unique(regexp(queryResult, 'COM[0-9]+', 'match'));
-%     serialInfo = instrhwinfo('serial');
-%     serialPorts = serialInfo.AvailableSerialPorts;
+    prevValue = get(handles.serial_list, 'value');
+    prevLength = length(get(handles.serial_list, 'String'));
+    
+    % [~, queryResult] = dos(['REG QUERY ' 'HKEY_LOCAL_MACHINE\HARDWARE\DEVICEMAP\SERIALCOMM']);
+    % serialPorts = unique(regexp(queryResult, 'COM[0-9]+', 'match'));
+    
+    [~, serialPorts] = dos('wmic path win32_pnpentity get caption | findstr (COM');
+    serialPorts = regexp(serialPorts, '[\w \-]+\(COM[0-9]+\)', 'match');
+    
+    % serialInfo = instrhwinfo('serial');
+    % serialPorts = serialInfo.AvailableSerialPorts;
+    
     % serialPorts = cell(0);
     % for i = 1:20
     %     s = serial(['COM' num2str(i)]);
@@ -134,8 +142,12 @@ function refresh_com_ports_Callback(hObject, eventdata, handles)
     %     end
     % end
     stringSet = {'Select COM Port' serialPorts{:}};
+    
+    % Prevent breaking the UI element if the selected index >= new length
+    if (length(stringSet) ~= prevLength)
+        set(handles.serial_list, 'value', 1);
+    end
     set(handles.serial_list, 'string', stringSet);
-    pause(0.1);
 % hObject    handle to refresh_com_ports (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -145,11 +157,12 @@ function refresh_com_ports_Callback(hObject, eventdata, handles)
 function connect_button_Callback(hObject, eventdata, handles)
 if (~handles.connected)
     comNumber = get(handles.serial_list, 'value');
-    comValue = get(handles.serial_list, 'string');
-    comValue = comValue{comNumber};
-    if (strcmp(comValue(1:3), 'COM'))
+    comString = get(handles.serial_list, 'string');
+    comString = comString{comNumber};
+    usableComString = regexp(comString, 'COM[0-9]+', 'match');
+    if (~strcmp(usableComString, ''))
         try
-            handles.KITT.openPort(['\\.\' comValue]);
+            handles.KITT.openPort(['\\.\' usableComString]);
             hObject.BackgroundColor = [1.0, 0.3, 0.3];
             hObject.String = 'Disconnect';
             handles.connected = true;
