@@ -58,6 +58,7 @@ function kitt_gui_test_OpeningFcn(hObject, eventdata, handles, varargin)
         'ExecutionMode', 'fixedRate', ...       % Run timer repeatedly.
         'Period', 0.1, ...                      % Initial period is 0.1 sec.
         'TimerFcn', {@update_display,hObject}); % Specify callback function.
+    graphCreator(handles);
 
     % Choose default command line output for kitt_gui_test
     handles.output = hObject;
@@ -199,7 +200,7 @@ function connect_button_ButtonDownFcn(hObject, eventdata, handles)
 end
 
 % --- Executes during object creation, after setting all properties.
-function distance_graph_CreateFcn(hObject, eventdata, handles)
+function graphCreator(handles)
     handles.distance_data = zeros(2, 50);
     handles.distance_time = -4.9:0.1:0;
     axes(handles.distance_graph);
@@ -210,10 +211,6 @@ function distance_graph_CreateFcn(hObject, eventdata, handles)
     xlabel('Time (s)', 'HorizontalAlignment', 'right');
     ylabel('Distance (cm)');
     legend({'Left' 'Right'});
-
-    % hObject    handle to distance_graph (see GCBO)
-    % eventdata  reserved - to be defined in a future version of MATLAB
-    % handles    empty - handles not created until after all CreateFcns called
 
     % Hint: place code in OpeningFcn to populate distance_graph
 end
