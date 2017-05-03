@@ -177,26 +177,38 @@ function connect_button_Callback(hObject, eventdata, handles)
         if (~strcmp(usableComString, ''))
             try
                 handles.KITT.openPort(['\\.\' usableComString{1}]);
-                hObject.BackgroundColor = [1.0, 0.3, 0.3];
-                hObject.String = 'Disconnect';
-                handles.connected = true;
-                start(handles.updateTimer);
+                handles = setConnectionState(hObject, true);
             catch
-                handles.connected = false;
+                handles.KITT.closePort();
+                handles = setConnectionState(hObject, false);
             end
         end
     else
         handles.KITT.closePort();
-        handles.connected = false;
-        stop(handles.updateTimer);
-        hObject.BackgroundColor = [0.573, 0.867, 0.596];
-        hObject.String = 'Connect';
+        handles = setConnectionState(hObject, false);
     end
     guidata(hObject, handles);
 
     % hObject    handle to connect_button (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
+end
+
+function handles = setConnectionState(hObject, state)
+    handles = guidata(hObject);
+    if (state)
+        hObject.BackgroundColor = [1.0, 0.3, 0.3];
+        hObject.String = 'Disconnect';
+        handles.connected = true;
+        start(handles.updateTimer);
+        handles.refresh_com_ports.Enable = 'off';
+    else
+        handles.connected = false;
+        stop(handles.updateTimer);
+        hObject.BackgroundColor = [0.573, 0.867, 0.596];
+        hObject.String = 'Connect';
+        handles.refresh_com_ports.Enable = 'on';
+    end
 end
 
 
