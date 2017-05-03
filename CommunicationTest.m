@@ -1,9 +1,10 @@
 %% Script settings
-comport = '\\.\COM5';       % Name of the port to be opened
+comport = '\\.\COM3';       % Name of the port to be opened
 re_open_port = false;       % Close and open port
-max_dist = 120;             % Distance to brake before the object
+max_dist = 100;             % Distance to brake before the object
+delay_time = 1.5e6          % Delay time in microseconds
 doTurn = false;             % Start with the turn or not
-EstimationThreshold = 200;  % cm
+EstimationThreshold = 300;  % cm
 
 % Create instance of control class
 KITT = testClass;
@@ -33,9 +34,8 @@ if (doTurn)
     pause(1);
     KITT.setMotorSpeed(15);
 else
-    tic;
-    KITT.setMotorSpeed(30);
-    KITT.setSteerDirection(2);
+    KITT.setMotorSpeed(25);
+    KITT.setSteerDirection(0);
 end
 
 %% Structs for the position estimation
@@ -56,11 +56,11 @@ while (true)
     right.d = KITT.rightDistance;
     
     % Ignore previous sensor values that are out of range to keep speed realistic
-    if (left.dOld >= 600); left.dOld = left.d; end;
-    if (right.dOld >= 600); right.dOld = right.d; end;
+    if (left.dOld >= EstimationThreshold); left.dOld = left.d; end;
+    if (right.dOld >= EstimationThreshold); right.dOld = right.d; end;
     
     % If we got new data, calculate new speed
-    if (left.d ~= left.dOld)
+    if (left.d ~= left.dOld)fit
         left = calcSpeed(left, time);
     % Else, interpolate position using previously calculated speed
     else
@@ -75,45 +75,48 @@ while (true)
         right = calcVirtualPos(right, time);
     end
     
-    % If we did not yet reach the wall
-    if (left.dVirt > max_dist && right.dVirt > max_dist)
-        % Print current status, such as position, speed, virt. pos, etc
-        printStatus(left, right);
-        
-        % Store data in array
-        leftMeasurements(index) = left;
-        rightMeasurements(index) = right;
-        index = index + 1;
-    % If we DID reach the wall, break out of loop an stop the car
-    else
-        break;
+    % Store data in array
+    leftMeasurements(index) = left;
+    rightMeasurements(index) = right;
+    
+    % fitting
+    if (index>samples)
+        y = transpose([rightMeasurements(index-samples:index).d,leftMeasurements(N-10:N).d]);
+        x = transpose(double([rightMeasurements(index-samples:index).t, leftMeasurements(index-samples:index).t] - rightMeasurements(1).t));
+        f = fit(x,y,'poly1');
+        z = (max_distance - f.p2) / f.p1; % time to collision
     end
     
+    if (z > 0 && z < delay_time)
+        break;        
+    else
+        % Print current status, such as position, speed, virt. pos, etc
+        printStatus();
+    end
+    index = index + 1;
     old_left = left;
     old_right = right;
 end
 
-
 %% Brake!
-timer = toc;
 KITT.setMotorSpeed(0);
 pause(0.3);
 
 %% Final measurement
 KITT.getDistance();
-printStatus(left, right);
+printStatus();
 
 % Wait and drive back
 KITT.setMotorSpeed(15);
 pause(2);
-%KITT.setMotorSpeed(8);
-%pause(2);
+KITT.setMotorSpeed(8);
+pause(2);
 
 % Set motor to neutral
 KITT.setMotorSpeed(15);
 
 KITT.getDistance();
-printStatus(left, right);
+printStatus();
 
 % Close port to free usage
 % KITT.closePort();
@@ -121,12 +124,9 @@ printStatus(left, right);
 %% Plot results
 N = index - 1;
 x = [leftMeasurements(1:N).d; rightMeasurements(1:N).d; leftMeasurements(1:N).dVirt; rightMeasurements(1:N).dVirt];
-t = double([leftMeasurements.t] - leftMeasurements(1).t) * 10^-6;
-t = t(1:N)./2;
-
+t = double([leftMeasurements.t] - leftMeasurements(1).t) * 10^-6 /2;
 figure(1);
 plot(t, x);
-ylim([0, 350]);
 title('Time vs place plot');
 xlabel('Time (s)');
 ylabel('Distance from object (cm)');
