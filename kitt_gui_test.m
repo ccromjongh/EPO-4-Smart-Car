@@ -58,7 +58,8 @@ function kitt_gui_test_OpeningFcn(hObject, eventdata, handles, varargin)
         'ExecutionMode', 'fixedRate', ...       % Run timer repeatedly.
         'Period', 0.1, ...                      % Initial period is 0.1 sec.
         'TimerFcn', {@update_display,hObject}); % Specify callback function.
-    graphCreator(handles);
+    guidata(hObject, handles);
+    handles = graphCreator(hObject);
 
     % Choose default command line output for kitt_gui_test
     handles.output = hObject;
@@ -75,12 +76,20 @@ function update_display(~, ~, hObject)
     handles = guidata(hObject);
     handles.KITT.getDistance();
     handles.KITT.getBatteryVOltage();
+    
+    % Refresh data in table
     data = {'Port name'         handles.KITT.currentPortName; ...
             'Battery voltage'	handles.KITT.batteryVoltage; ...
             'Left distance'     handles.KITT.leftDistance; ...
             'Right distance'    handles.KITT.rightDistance
            };
     set(handles.status_table, 'Data', data);
+    
+    % Refresh data in plots
+    handles.distance_plot(1).YData = [handles.distance_plot(1).YData(2:end) handles.KITT.leftDistance];
+    handles.distance_plot(2).YData = [handles.distance_plot(2).YData(2:end) handles.KITT.rightDistance];
+    
+    % Save data to handles variable
     guidata(hObject, handles);
 end
 
@@ -200,11 +209,12 @@ function connect_button_ButtonDownFcn(hObject, eventdata, handles)
 end
 
 % --- Executes during object creation, after setting all properties.
-function graphCreator(handles)
-    handles.distance_data = zeros(2, 50);
-    handles.distance_time = -4.9:0.1:0;
+function handles = graphCreator(hObject)
+    handles = guidata(hObject);
+    distance_data = randn(2, 50)*40 + 150;
+    distance_time = -4.9:0.1:0;
     axes(handles.distance_graph);
-    plot(handles.distance_time, handles.distance_data, 'x-');
+    handles.distance_plot = plot(distance_time, distance_data, 'x-');
     title('Distance graph');
     xlim([-5 0]);
     ylim([0 350]);
