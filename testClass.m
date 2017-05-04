@@ -88,14 +88,14 @@ classdef testClass<handle
             rightStr = distArr{2};                                  % Get Right Dist. sting
             obj.leftDistance = str2double(leftStr(4:end));          % Extract number
             obj.rightDistance = str2double(rightStr(4:end));        % Extract number
-            if (obj.leftDistance < 20); obj.leftDistance = 999; end;
-            if (obj.rightDistance < 20); obj.rightDistance = 999; end;
+            if (obj.leftDistance < 10); obj.leftDistance = 999; end;
+            if (obj.rightDistance < 10); obj.rightDistance = 999; end;
         end
         
         % Function to het the battery voltage as a numerical value
         function obj = getBatteryVOltage(obj)
             battString = EPOCommunications('transmit', 'Sv');       % request battery status string
-            obj.batteryVoltage = str2double(battString(6:end-1));   % Extract number
+            obj.batteryVoltage = str2double(battString(6:end-3));   % Extract number
         end
     end
 end
