@@ -2,7 +2,7 @@ clear variables;
 %% Script settings
 comport = '\\.\COM7';       % Name of the port to be opened
 re_open_port = false;       % Close and open port
-max_distance = 50;             % Distance to brake before the object
+max_distance = 100;             % Distance to brake before the object
 delay_time = 2.15e6;          % Delay time in microseconds
 doTurn = false;             % Start with the turn or not
 EstimationThreshold = 500;  % cm
