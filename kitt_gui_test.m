@@ -52,11 +52,15 @@ function kitt_gui_test_OpeningFcn(hObject, eventdata, handles, varargin)
     % eventdata  reserved - to be defined in a future version of MATLAB
     % handles    structure with handles and user data (see GUIDATA)
     % varargin   command line arguments to kitt_gui_test (see VARARGIN)
+    
+    handles.updatePeriod = 0.1;
+    handles.graphPeriod = 5;
+    
     handles.KITT = testClass;
     handles.connected = false;
     handles.updateTimer = timer(...
         'ExecutionMode', 'fixedRate', ...       % Run timer repeatedly.
-        'Period', 0.1, ...                      % Initial period is 0.1 sec.
+        'Period', handles.updatePeriod, ...     % Initial period is 0.1 sec.
         'TimerFcn', {@update_display,hObject}); % Specify callback function.
     guidata(hObject, handles);
     handles = graphCreator(hObject);
@@ -75,15 +79,20 @@ end
 function update_display(~, ~, hObject)
     handles = guidata(hObject);
     handles.KITT.getDistance();
-    handles.KITT.getBatteryVOltage();
+    % handles.KITT.getBatteryVOltage();
     
     % Refresh data in table
-    data = {'Port name'         handles.KITT.currentPortName; ...
-            'Battery voltage'	handles.KITT.batteryVoltage; ...
-            'Left distance'     handles.KITT.leftDistance; ...
-            'Right distance'    handles.KITT.rightDistance
-           };
-    set(handles.status_table, 'Data', data);
+    try
+        data = {'Port name'         handles.KITT.currentPortName; ...
+                'Battery voltage'	handles.KITT.batteryVoltage; ...
+                'Left distance'     handles.KITT.leftDistance; ...
+                'Right distance'    handles.KITT.rightDistance
+               };
+        set(handles.status_table, 'Data', data);
+    catch
+        disp(data);
+        disp(handles.KITT.batteryVoltage);
+    end
     
     % Refresh data in plots
     handles.distance_plot(1).YData = [handles.distance_plot(1).YData(2:end) handles.KITT.leftDistance];
@@ -223,8 +232,13 @@ end
 % --- Executes during object creation, after setting all properties.
 function handles = graphCreator(hObject)
     handles = guidata(hObject);
-    distance_data = randn(2, 50)*40 + 150;
-    distance_time = -4.9:0.1:0;
+    
+    graphPeriod = handles.graphPeriod;
+    updatePeriod = handles.updatePeriod;
+    nItems = graphPeriod/updatePeriod;
+    distance_data = randn(2, nItems)*40 + 150;
+    distance_time = -graphPeriod + updatePeriod:updatePeriod:0;
+    
     axes(handles.distance_graph);
     handles.distance_plot = plot(distance_time, distance_data, 'x-');
     title('Distance graph');

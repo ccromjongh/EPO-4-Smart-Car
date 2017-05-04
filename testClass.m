@@ -84,18 +84,23 @@ classdef testClass<handle
         function obj = getDistance(obj)
             distString = EPOCommunications('transmit', 'Sd');       % request distance status string
             distArr = strsplit(distString, '\n');                   % Split string by \n char
-            leftStr = distArr{1};                                   % Get Left Dist. string
-            rightStr = distArr{2};                                  % Get Right Dist. sting
-            obj.leftDistance = str2double(leftStr(4:end));          % Extract number
-            obj.rightDistance = str2double(rightStr(4:end));        % Extract number
-            if (obj.leftDistance < 20); obj.leftDistance = 999; end;
-            if (obj.rightDistance < 20); obj.rightDistance = 999; end;
+            
+            % Safeguard to filter out wrong transmissions
+            if (length(distArr) >= 3)
+                leftStr = distArr{1};                                   % Get Left Dist. string
+                rightStr = distArr{2};                                  % Get Right Dist. sting
+                obj.leftDistance = str2double(leftStr(4:end));          % Extract number
+                obj.rightDistance = str2double(rightStr(4:end));        % Extract number
+                if (obj.leftDistance < 10); obj.leftDistance = 999; end;
+                if (obj.rightDistance < 10); obj.rightDistance = 999; end;
+            end
         end
         
         % Function to het the battery voltage as a numerical value
         function obj = getBatteryVOltage(obj)
             battString = EPOCommunications('transmit', 'Sv');       % request battery status string
-            obj.batteryVoltage = str2double(battString(6:end-1));   % Extract number
+            numStr = regexp(battString, '[0-9]+.[0-9]', 'match');
+            obj.batteryVoltage = str2double(numStr);                % Extract number
         end
     end
 end
