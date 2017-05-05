@@ -2,8 +2,8 @@ clear variables;
 %% Script settings
 comport = '\\.\COM7';       % Name of the port to be opened
 re_open_port = false;       % Close and open port
-max_distance = 50;             % Distance to brake before the object
-delay_time = 2.15e6;          % Delay time in microseconds
+max_distance = 50;          % Distance to brake before the object
+delay_time = s;        % Delay time in seconds
 doTurn = false;             % Start with the turn or not
 EstimationThreshold = 500;  % cm
 samples = 5;    
@@ -48,35 +48,42 @@ index = 1;
 leftMeasurements = repmat(left, 1, 99);
 rightMeasurements = repmat(right, 1, 99);
 
-
+tic
 %% Brakingloop
 while (true)
     % Get distance information from KITT
     KITT.getDistance();
-    time = tic;
+    
     left.d = KITT.leftDistance;
+    left.t = toc;
     right.d = KITT.rightDistance;
+    right.t = toc;
     
     % Ignore previous sensor values that are out of range to keep speed realistic
-    if (left.d >= EstimationThreshold); left.d = left.dOld; end;
-    if (right.d >= EstimationThreshold); right.d = right.dOld; end;
+    if (left.d >= EstimationThreshold); left.d = old_left; end;
+    if (right.d >= EstimationThreshold); right.d = old_right; end;
     
-    % If we got new data, calculate new speed
-    if (left.d ~= left.dOld)
-        left = calcSpeed(left, time);
-    % Else, interpolate position using previously calculated speed
-    else
-        left = calcVirtualPos(left, time);
-    end
     
-    % If we got new data, calculate new speed
-    if (right.d ~= right.dOld)
-        right = calcSpeed(right, time);
-    else
-    % Else, interpolate position using previously calculated speed
-        right = calcVirtualPos(right, time);
-    end
     
+    
+%     % If we got new data, calculate new speed
+%     if (left.d ~= left.dOld)
+%         left = calcSpeed(left, time);
+%     % Else, interpolate position using previously calculated speed
+%     else
+%         left = calcVirtualPos(left, time);
+%     end
+%     
+%     % If we got new data, calculate new speed
+%     if (right.d ~= right.dOld)
+%         right = calcSpeed(right, time);
+%     else
+%     % Else, interpolate position using previously calculated speed
+%         right = calcVirtualPos(right, time);
+%     end
+    
+
+
     % Store data in array
     leftMeasurements(index) = left;
     rightMeasurements(index) = right;
@@ -86,8 +93,8 @@ while (true)
     if (index>samples)
         dr = transpose([rightMeasurements(index-samples:index).d]);
         dl = transpose([leftMeasurements(index-samples:index).d]);
-        tr = transpose(double([rightMeasurements(index-samples:index).t] - rightMeasurements(1).t));
-        tl = transpose(double([leftMeasurements(index-samples:index).t] - leftMeasurements(1).t));
+        tr = transpose(double([rightMeasurements(index-samples:index).t]));
+        tl = transpose(double([leftMeasurements(index-samples:index).t]));
         fr = fit(tr,dr,'poly1');
         if (fr.p1<0)
             zr = (max_distance - fr.p2) / fr.p1 - tr(end); % time to collision
@@ -136,11 +143,23 @@ printStatus(left,right);
 
 %% Plot results
 N = index - 1;
-x = [leftMeasurements(1:N).d; rightMeasurements(1:N).d; leftMeasurements(1:N).dVirt; rightMeasurements(1:N).dVirt];
-y = double([leftMeasurements(1:N).t] - leftMeasurements(1).t) * 10^-6 /2;
+x = [leftMeasurements(1:N).d; rightMeasurements(1:N).d];
+y = double([leftMeasurements(1:N).t]) * 10^-6 /2;
 figure(1);
 plot(y, x);
 title('Time vs place plot');
 xlabel('Time (s)');
 ylabel('Distance from object (cm)');
-legend('Left sensor', 'Right sensor', 'Virtual left distance', 'Virtual right distance');
+legend('Left sensor', 'Right sensor');
+
+figure(2);
+subplot(2,1,1);
+plot(fl,dl,tl);
+title('Left Sensor Fitting');
+xlabel('Time (s)');
+ylabel('Distance from object (cm)');
+subplot(2,1,2);
+plot(fr,dr,tr);
+title('Right Sensor Fitting');
+xlabel('Time (s)');
+ylabel('Distance from object (cm)');
