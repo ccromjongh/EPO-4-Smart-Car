@@ -23,7 +23,7 @@ function varargout = kitt_gui_test(varargin)
 
     % Edit the above text to modify the response to help kitt_gui_test
 
-    % Last Modified by GUIDE v2.5 02-May-2017 21:18:52
+    % Last Modified by GUIDE v2.5 05-May-2017 17:14:54
 
     % Begin initialization code - DO NOT EDIT
     gui_Singleton = 1;
@@ -53,15 +53,23 @@ function kitt_gui_test_OpeningFcn(hObject, eventdata, handles, varargin)
     % handles    structure with handles and user data (see GUIDATA)
     % varargin   command line arguments to kitt_gui_test (see VARARGIN)
     
-    handles.updatePeriod = 0.1;
-    handles.graphPeriod = 5;
+    handles.dataUpdatePeriod = 0.1;
+    handles.graphDomain = 5;
+    handles.graphUpdatePeriod = 0.2;
+    handles.keysPressed = {};
     
     handles.KITT = testClass;
     handles.connected = false;
-    handles.updateTimer = timer(...
-        'ExecutionMode', 'fixedRate', ...       % Run timer repeatedly.
-        'Period', handles.updatePeriod, ...     % Initial period is 0.1 sec.
-        'TimerFcn', {@update_display,hObject}); % Specify callback function.
+    handles.dataUpdateTimer = timer(...
+        'ExecutionMode', 'fixedRate', ...           % Run timer repeatedly.
+        'Period', handles.dataUpdatePeriod, ...     % Initial period, see above.
+        'TimerFcn', {@update_display, hObject});    % Specify callback function.
+    
+    handles.graphUpdateTimer = timer(...
+        'ExecutionMode', 'fixedRate', ...           % Run timer repeatedly.
+        'Period', handles.graphUpdatePeriod, ...    % Initial period, see above.
+        'TimerFcn', {@update_graph, hObject});      % Specify callback function.
+    
     guidata(hObject, handles);
     handles = graphCreator(hObject);
 
@@ -88,15 +96,27 @@ function update_display(~, ~, hObject)
                 'Left distance'     handles.KITT.leftDistance; ...
                 'Right distance'    handles.KITT.rightDistance
                };
-        set(handles.status_table, 'Data', data);
+        handles.status_table.Data = data;
     catch
         disp(data);
         disp(handles.KITT.batteryVoltage);
     end
     
     % Refresh data in plots
-    handles.distance_plot(1).YData = [handles.distance_plot(1).YData(2:end) handles.KITT.leftDistance];
-    handles.distance_plot(2).YData = [handles.distance_plot(2).YData(2:end) handles.KITT.rightDistance];
+    handles.distData = [handles.distData(1, 2:end) handles.KITT.leftDistance; ...
+                        handles.distData(2, 2:end) handles.KITT.rightDistance];
+    
+    % Save data to handles variable
+    guidata(hObject, handles);
+end
+
+function update_graph(~, ~, hObject)
+    % Get handles
+    handles = guidata(hObject);
+    
+    % Refresh data in plots
+    handles.distance_plot(1).YData = handles.distData(1, :);
+    handles.distance_plot(2).YData = handles.distData(2, :);
     
     % Save data to handles variable
     guidata(hObject, handles);
@@ -177,7 +197,7 @@ function refresh_com_ports_Callback(hObject, eventdata, handles)
 end
 
 % --- Executes on button press in connect_button.
-function connect_button_Callback(hObject, eventdata, handles)
+function connect_button_Callback(hObject, eventdata, handles) %#ok<DEFNU>
     if (~handles.connected)
         comNumber = get(handles.serial_list, 'value');
         comString = get(handles.serial_list, 'string');
@@ -185,7 +205,7 @@ function connect_button_Callback(hObject, eventdata, handles)
         usableComString = regexp(comString, 'COM[0-9]+', 'match');
         if (~strcmp(usableComString, ''))
             try
-                handles.KITT.openPort(['\\.\' usableComString{1}]);
+                handles.KITT.openPort(usableComString{1});
                 handles = setConnectionState(hObject, true);
             catch
                 handles.KITT.closePort();
@@ -209,11 +229,13 @@ function handles = setConnectionState(hObject, state)
         hObject.BackgroundColor = [1.0, 0.3, 0.3];
         hObject.String = 'Disconnect';
         handles.connected = true;
-        start(handles.updateTimer);
+        start(handles.dataUpdateTimer);
+        start(handles.graphUpdateTimer);
         handles.refresh_com_ports.Enable = 'off';
     else
         handles.connected = false;
-        stop(handles.updateTimer);
+        stop(handles.dataUpdateTimer);
+        stop(handles.graphUpdateTimer);
         hObject.BackgroundColor = [0.573, 0.867, 0.596];
         hObject.String = 'Connect';
         handles.refresh_com_ports.Enable = 'on';
@@ -233,10 +255,10 @@ end
 function handles = graphCreator(hObject)
     handles = guidata(hObject);
     
-    graphPeriod = handles.graphPeriod;
-    updatePeriod = handles.updatePeriod;
+    graphPeriod = handles.graphDomain;
+    updatePeriod = handles.dataUpdatePeriod;
     nItems = graphPeriod/updatePeriod;
-    distance_data = randn(2, nItems)*40 + 150;
+    distance_data = zeros(2, nItems); %*40 + 150;
     distance_time = -graphPeriod + updatePeriod:updatePeriod:0;
     
     axes(handles.distance_graph);
@@ -247,6 +269,126 @@ function handles = graphCreator(hObject)
     xlabel('Time (s)', 'HorizontalAlignment', 'right');
     ylabel('Distance (cm)');
     legend({'Left' 'Right'});
+    
+    handles.distData = distance_data;
 
     % Hint: place code in OpeningFcn to populate distance_graph
+end
+
+
+% --- Executes on key press with focus on figure1 or any of its controls.
+function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
+    %	Key: name of the key that was pressed, in lower case
+    %	Character: character interpretation of the key(s) that was pressed
+    %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
+    % handles    structure with handles and user data (see GUIDATA)
+    
+    keyPressed = eventdata.Key;
+    if (~any(strcmp(handles.keysPressed, keyPressed)))
+        handles.keysPressed{end+1} = keyPressed;
+    end
+    
+    middle = 15;
+    manualControlSpeed = handles.manual_control_slider.Value;
+    
+    doControl = handles.manual_control_check.Value;
+    
+    if (doControl && handles.connected)
+        switch keyPressed
+        	case 'w'
+            	KITT.setMotorSpeed(middle + manualControlSpeed);
+            case 'a'
+            	KITT.setSteerDirection(-22);
+            case 's'
+            	KITT.setMotorSpeed(middle - manualControlSpeed);
+            case 'd'
+            	KITT.setSteerDirection(22);
+            case 'escape'
+            	KITT.setMotorSpeed(15);
+                handles.keysPressed = {'escape'};
+            otherwise
+        end
+    end
+    
+    guidata(hObject, handles);
+end
+
+% --- Executes on key release with focus on figure1 or any of its controls.
+function figure1_WindowKeyReleaseFcn(hObject, eventdata, handles) %#ok<DEFNU>
+    % hObject    handle to figure1 (see GCBO)
+    % eventdata  structure with the following fields (see MATLAB.UI.FIGURE)
+    %	Key: name of the key that was released, in lower case
+    %	Character: character interpretation of the key(s) that was released
+    %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) released
+    % handles    structure with handles and user data (see GUIDATA)
+    
+    
+    keyReleased = eventdata.Key;
+    keysPressed = handles.keysPressed;
+    
+    try
+        % Remove value from array
+        keysPressed(strcmp(keysPressed, keyReleased)) = [];
+    % If something goes wrong, delete whole array and stop KITT
+    catch
+        keysPressed = {};
+        KITT.setMotorSpeed(15);
+    end
+    
+    % If neither 'w' or 's' is pressed, stop KITT
+    if (~any([strcmp(keysPressed, 'w') strcmp(keysPressed, 's')]))
+        KITT.setMotorSpeed(15);
+    end
+    
+    % If neither 'a' or 'd' is pressed, stop KITT
+    if (~any([strcmp(keysPressed, 'a') strcmp(keysPressed, 'd')]))
+        KITT.setMotorSpeed(15);
+    end
+    
+    % Return values to their original array
+    handles.keysPressed = keysPressed;
+    
+    guidata(hObject, handles);
+end
+
+
+% --- Executes on button press in manual_control_check.
+function manual_control_check_Callback(hObject, eventdata, handles)
+    % hObject    handle to manual_control_check (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+
+    % Hint: get(hObject,'Value') returns toggle state of manual_control_check
+end
+
+
+% --- Executes on slider movement.
+function manual_control_slider_Callback(hObject, eventdata, handles)
+    % hObject    handle to manual_control_slider (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    structure with handles and user data (see GUIDATA)
+
+    % Hints: get(hObject,'Value') returns position of slider
+    %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+    
+    % Aquire, round and set value
+    value = uint8(hObject.Value);
+    hObject.Value = value;
+    
+    handles.manual_control_slider_text.String = ['Control speed: ' num2str(value) '/15'];
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function manual_control_slider_CreateFcn(hObject, eventdata, handles)
+    % hObject    handle to manual_control_slider (see GCBO)
+    % eventdata  reserved - to be defined in a future version of MATLAB
+    % handles    empty - handles not created until after all CreateFcns called
+
+    % Hint: slider controls usually have a light gray background.
+    if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+        set(hObject,'BackgroundColor',[.9 .9 .9]);
+    end
 end

@@ -2,6 +2,9 @@
 function directionkeys()
 
 c=0;
+dir = '0';
+% Create instance of control class
+KITT = testClass;
 while  c <= 4;
 w = waitforbuttonpress;
 if w
@@ -10,22 +13,22 @@ if w
 end
     switch dir
          case 'w'
-          setMotorSpeed(24);
+          KITT.setMotorSpeed(24);
           c=1;
          case'a'
-          setSteerDirection(-22);
+          KITT.setSteerDirection(-22);
           c=2;
          case  's'
-          setMotorSpeed(-22);
+          KITT.setMotorSpeed(6);
          c=3;
          case 'd'
-          setSteerDirection(22);
+          KITT.setSteerDirection(22);
          c=4;
          case 'e'
-          setMotorSpeed(0);    
+          KITT.setMotorSpeed(0);    
          c= -1;
         case 'q'
-           setMotorSpeed(0);  
+           KITT.setMotorSpeed(0);  
          c=5;
         otherwise
          c=0;

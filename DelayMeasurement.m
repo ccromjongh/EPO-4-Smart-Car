@@ -1,7 +1,7 @@
 clear variables;
 %% Script settings
 comport = '\\.\COM7';       % Name of the port to be opened
-re_open_port = false;       % Close and open port
+re_open_port = true;       % Close and open port
 
 % Create instance of control class
 KITT = testClass;
