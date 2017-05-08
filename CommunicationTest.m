@@ -1,11 +1,11 @@
 clear variables;
 %% Script settings
-comport = '\\.\COM7';       % Name of the port to be opened
+comport = '\\.\COM9';       % Name of the port to be opened
 re_open_port = false;       % Close and open port
-max_distance = 50;          % Distance to brake before the object
-delay_time = s;        % Delay time in seconds
+max_distance = 70;          % Distance to brake before the object
+delay_time = 0.7;        % Delay time in seconds
 doTurn = false;             % Start with the turn or not
-EstimationThreshold = 500;  % cm
+EstimationThreshold = 400;  % cm
 samples = 5;    
 
 % Create instance of control class
@@ -20,6 +20,17 @@ KITT.setupBeacon(30000, 5000, 50, '983BD2C4');
 
 KITT.getStatus();   % Get status from KITT
 KITT.status         % Print status message
+
+
+
+%% Structs for the position estimation
+left = struct('d', 999, 't', 0);
+right = struct('d', 999, 't', 0);
+
+index = 1;
+leftMeasurements = repmat(left, 1, 9999);
+rightMeasurements = repmat(right, 1, 9999);
+
 
 %% Turn
 if (doTurn)
@@ -40,13 +51,7 @@ else
     KITT.setSteerDirection(4);
 end
 
-%% Structs for the position estimation
-left = struct('d', 999, 'dOld', 999, 'dVirt', 0, 'v', double(0), 't', 0, 'tOld', 0, 'dt', double(0), 'dx', 0);
-right = struct('d', 999, 'dOld', 999, 'dVirt', 0, 'v', double(0), 't', 0, 'tOld', 0, 'dt', double(0), 'dx', 0);
 
-index = 1;
-leftMeasurements = repmat(left, 1, 99);
-rightMeasurements = repmat(right, 1, 99);
 
 tic
 %% Brakingloop
@@ -60,8 +65,20 @@ while (true)
     right.t = toc;
     
     % Ignore previous sensor values that are out of range to keep speed realistic
-    if (left.d >= EstimationThreshold); left.d = old_left; end;
-    if (right.d >= EstimationThreshold); right.d = old_right; end;
+    if (left.d >= EstimationThreshold)
+        if (exist('old_left', 'var'))
+            left.d = old_left.d;
+        else
+            continue
+        end
+    end;
+    if (right.d >= EstimationThreshold)
+        if (exist('old_right', 'var'))
+            right.d = old_right.d;
+        else
+            continue
+        end
+    end
     
     
     
@@ -97,13 +114,13 @@ while (true)
         tl = transpose(double([leftMeasurements(index-samples:index).t]));
         fr = fit(tr,dr,'poly1');
         if (fr.p1<0)
-            zr = (max_distance - fr.p2) / fr.p1 - tr(end); % time to collision
+            zr = ((max_distance - fr.p2) / fr.p1) - tr(end); % time to collision
         else 
             zr = 0;
         end
         fl = fit(tl,dl,'poly1');
         if (fl.p1<0)
-            zl = (max_distance - fl.p2) / fl.p1 - tl(end); % time to collision
+            zl = ((max_distance - fl.p2) / fl.p1) - tl(end); % time to collision
         else
             zl = 0;
         end
@@ -112,7 +129,7 @@ while (true)
         zl = 0;
     end
     
-    if ((zr > 0 && zr < delay_time) || (zl > 0 && zl < delay_time) || (right.d<max_distance) || (left.d<max_distance))
+    if ((zr > 0 && zr < delay_time) || (zl > 0 && zl < delay_time))
         break;        
     else
         % Print current status, such as position, speed, virt. pos, etc
@@ -129,14 +146,14 @@ pause(0.3);
 
 %% Final measurement
 KITT.getDistance();
-printStatus(left,right);
+%printStatus(left,right);
 
 
 % Set motor to neutral
 KITT.setMotorSpeed(15);
 
 KITT.getDistance();
-printStatus(left,right);
+%printStatus(left,right);
 
 % Close port to free usage
 % KITT.closePort();
@@ -144,7 +161,7 @@ printStatus(left,right);
 %% Plot results
 N = index - 1;
 x = [leftMeasurements(1:N).d; rightMeasurements(1:N).d];
-y = double([leftMeasurements(1:N).t]) * 10^-6 /2;
+y = double([leftMeasurements(1:N).t]);
 figure(1);
 plot(y, x);
 title('Time vs place plot');
@@ -154,12 +171,12 @@ legend('Left sensor', 'Right sensor');
 
 figure(2);
 subplot(2,1,1);
-plot(fl,dl,tl);
+plot(fl,tl,dl);
 title('Left Sensor Fitting');
 xlabel('Time (s)');
 ylabel('Distance from object (cm)');
 subplot(2,1,2);
-plot(fr,dr,tr);
+plot(fr,tr,dr);
 title('Right Sensor Fitting');
 xlabel('Time (s)');
 ylabel('Distance from object (cm)');
