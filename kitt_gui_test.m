@@ -55,7 +55,7 @@ function kitt_gui_test_OpeningFcn(hObject, eventdata, handles, varargin)
     
     handles.dataUpdatePeriod = 0.1;
     handles.graphDomain = 5;
-    handles.graphUpdatePeriod = 0.2;
+    handles.graphUpdatePeriod = 0.5;
     handles.keysPressed = {};
     
     handles.KITT = testClass;
@@ -286,8 +286,11 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     
     keyPressed = eventdata.Key;
+    disp(["keyDown!: " num2str(keyPressed)]);
+    newCommand = false;
     if (~any(strcmp(handles.keysPressed, keyPressed)))
         handles.keysPressed{end+1} = keyPressed;
+        newCommand = true;
     end
     
     middle = 15;
@@ -295,18 +298,20 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
     
     doControl = handles.manual_control_check.Value;
     
-    if (doControl && handles.connected)
+    if (doControl && handles.connected && newCommand)
+        disp(["pressed: " num2str(keyPressed)]);
+        
         switch keyPressed
         	case 'w'
-            	KITT.setMotorSpeed(middle + manualControlSpeed);
+            	handles.KITT.setMotorSpeed(middle + manualControlSpeed);
             case 'a'
-            	KITT.setSteerDirection(-22);
+            	handles.KITT.setSteerDirection(40);
             case 's'
-            	KITT.setMotorSpeed(middle - manualControlSpeed);
+            	handles.KITT.setMotorSpeed(middle - manualControlSpeed);
             case 'd'
-            	KITT.setSteerDirection(22);
+            	handles.KITT.setSteerDirection(-40);
             case 'escape'
-            	KITT.setMotorSpeed(15);
+            	handles.KITT.setMotorSpeed(15);
                 handles.keysPressed = {'escape'};
             otherwise
         end
@@ -328,23 +333,28 @@ function figure1_WindowKeyReleaseFcn(hObject, eventdata, handles) %#ok<DEFNU>
     keyReleased = eventdata.Key;
     keysPressed = handles.keysPressed;
     
-    try
-        % Remove value from array
-        keysPressed(strcmp(keysPressed, keyReleased)) = [];
-    % If something goes wrong, delete whole array and stop KITT
-    catch
-        keysPressed = {};
-        KITT.setMotorSpeed(15);
-    end
+    disp(["released: " num2str(keyReleased)]);
+    doControl = handles.manual_control_check.Value;
     
-    % If neither 'w' or 's' is pressed, stop KITT
-    if (~any([strcmp(keysPressed, 'w') strcmp(keysPressed, 's')]))
-        KITT.setMotorSpeed(15);
-    end
-    
-    % If neither 'a' or 'd' is pressed, stop KITT
-    if (~any([strcmp(keysPressed, 'a') strcmp(keysPressed, 'd')]))
-        KITT.setMotorSpeed(15);
+    if (handles.connected && doControl)
+        try
+            % Remove value from array
+            keysPressed(strcmp(keysPressed, keyReleased)) = [];
+        % If something goes wrong, delete whole array and stop KITT
+        catch
+            keysPressed = {};
+            handles.KITT.setMotorSpeed(15);
+        end
+
+        % If neither 'w' or 's' is pressed, stop KITT
+        if (~any([strcmp(keysPressed, 'w') strcmp(keysPressed, 's')]))
+            handles.KITT.setMotorSpeed(15);
+        end
+
+        % If neither 'a' or 'd' is pressed, stop KITT
+        if (~any([strcmp(keysPressed, 'a') strcmp(keysPressed, 'd')]))
+            handles.KITT.setSteerDirection(0);
+        end
     end
     
     % Return values to their original array
