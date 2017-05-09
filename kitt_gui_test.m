@@ -187,9 +187,9 @@ function refresh_com_ports_Callback(hObject, eventdata, handles)
     
     % Prevent breaking the UI element if the selected index >= new length
     if (length(stringSet) ~= prevLength)
-        set(handles.serial_list, 'value', 1);
+        set(handles.serial_list, 'Value', 1);
     end
-    set(handles.serial_list, 'string', stringSet);
+    set(handles.serial_list, 'String', stringSet);
     
     % hObject    handle to refresh_com_ports (see GCBO)
     % eventdata  reserved - to be defined in a future version of MATLAB
@@ -286,7 +286,7 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
     % handles    structure with handles and user data (see GUIDATA)
     
     keyPressed = eventdata.Key;
-    disp(["keyDown!: " num2str(keyPressed)]);
+    disp(['keyDown!: ' num2str(keyPressed)]);
     newCommand = false;
     if (~any(strcmp(handles.keysPressed, keyPressed)))
         handles.keysPressed{end+1} = keyPressed;
@@ -299,7 +299,7 @@ function figure1_WindowKeyPressFcn(hObject, eventdata, handles)
     doControl = handles.manual_control_check.Value;
     
     if (doControl && handles.connected && newCommand)
-        disp(["pressed: " num2str(keyPressed)]);
+        disp(['pressed: ' num2str(keyPressed)]);
         
         switch keyPressed
         	case 'w'
@@ -333,7 +333,7 @@ function figure1_WindowKeyReleaseFcn(hObject, eventdata, handles) %#ok<DEFNU>
     keyReleased = eventdata.Key;
     keysPressed = handles.keysPressed;
     
-    disp(["released: " num2str(keyReleased)]);
+    disp(['released: ' num2str(keyReleased)]);
     doControl = handles.manual_control_check.Value;
     
     if (handles.connected && doControl)
