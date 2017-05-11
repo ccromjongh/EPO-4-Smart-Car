@@ -4,10 +4,10 @@ load train
 %gpuDevice(1);
 
 gx = gpuArray(single(y));
-n = 100;
+n = 1000;
 
-test = gpuArray(single(rand(1, 10)));
-prep = fft(test);
+%test = gpuArray(single(rand(1, 10)));
+%prep = fft(test);
 %wait(gpuDevice(1));
 
 tic
