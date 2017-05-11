@@ -47,6 +47,7 @@ rightTemp = KITT.rightDistance;
 for j = 1:minimumSamples
     leftMeasurements(index) = struct('d', leftTemp, 't', -j*0.1);
     leftMeasurements(index) = struct('d', rightTemp, 't', -j*0.1);
+    index = index + 1;
 end
 
 
@@ -112,6 +113,8 @@ while (true)
         tR = transpose(double([rightMeasurements(startIndex:index).t]));
         tL = transpose(double([leftMeasurements(startIndex:index).t]));
         
+        zr = 0; zl = 0;
+        
         %% Right Fitting
         
         %fR = fit(tR,dR,'poly2', 'Robust', 'Bisquare');
@@ -125,9 +128,13 @@ while (true)
         % Only take real values
         rootsR = rootsR(real(rootsR)>0&imag(rootsR)==0);
         
-        if (~isempty(rootsR) && rootsR(2) > 0.5)
-            zr = rootsR(2) - tR(end);
-        else 
+        if (~isempty(rootsR))
+            if(max(rootsR) > 0.5)
+                zr = max(rootsR) - tR(end);
+            else
+                zr = 0;
+            end
+        else
             zr = 0;
         end
         
@@ -144,8 +151,12 @@ while (true)
         % Only take real values
         rootsL = rootsL(real(rootsL)>0&imag(rootsL)==0);
         
-        if (~isempty(rootsL) && rootsL(2) > 0.5)
-            zr = rootsR(2) - tR(end);
+        if (~isempty(rootsL))
+            if(max(rootsL) > 0.5)
+                zl = max(rootsL) - tL(end);
+            else
+                zl = 0;
+            end
         else
             zl = 0;
         end
@@ -195,14 +206,22 @@ xlabel('Time (s)');
 ylabel('Distance from object (cm)');
 legend('Left sensor', 'Right sensor');
 
+timeMin = min(tL(1), tR(1));
+timeMax = min(tL(end), tR(end));
+tFit = timeMin:0.05:timeMax;
+fitR = polyval(fR, tFit);
+fitL = polyval(fL, tFit);
+
 figure(2);
 subplot(2,1,1);
-plot(fL,tL,dL);
+plot(tFit, fitL, tL, dL);
+ylim([0 400]);
 title('Left Sensor Fitting');
 xlabel('Time (s)');
 ylabel('Distance from object (cm)');
 subplot(2,1,2);
-plot(fR,tR,dR);
+plot(tFit, fitR, tR, dR);
+ylim([0 400]);
 title('Right Sensor Fitting');
 xlabel('Time (s)');
 ylabel('Distance from object (cm)');
