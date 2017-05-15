@@ -16,6 +16,7 @@ classdef testClass<handle
         function obj = openPort (obj, comport)
             if (~strcmp(obj.currentPortName, comport))          % Only act if string is different
                 EPOCommunications('close');                     % If port was open, close it first
+                pause(0.1);
                 obj.portIsOpen = false;
                 result = EPOCommunications('open', comport);    % Open connection
                 if (result == 0)

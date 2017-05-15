@@ -1,17 +1,23 @@
 function [Z, Fit] = fitFunction (timeArr, distArr, max_distance)
     % Fit = fit(timeArr, distArr, 'poly2', 'Robust', 'Bisquare');
     Fit = polyfit(timeArr, distArr, 2);
+    
+    % Calculate speed using derivative
     Deriv = polyder(Fit);
-    totalDistance = max_distance + polyval(Deriv, timeArr)^2/500;
+    speed = polyval(Deriv, timeArr(end));
+    totalDistance = max_distance + speed^2/900;
+    fprintf("totalDistance = %.2f\tbreakDist = %.2f\tspeed = %.2f\n", totalDistance, (totalDistance - max_distance), speed);
 
-    Fit(end) = Fit(end) - totalDistance;
-    rootsR = roots(Fit);
+    Fit2 = Fit;
+    Fit2(end) = Fit2(end) - totalDistance;
+    fitRoots = roots(Fit2);
     % Only take real values
-    rootsR = rootsR(real(rootsR)>0&imag(rootsR)==0);
+    fitRoots = fitRoots(real(fitRoots)>0&imag(fitRoots)==0);
 
-    if (~isempty(rootsR))
-        if(max(rootsR) > 0.5)
-            Z = max(rootsR) - timeArr(end);
+    % Only if roots are found, should Z be calculated
+    if (~isempty(fitRoots))
+        if(max(fitRoots) > 0.5 && speed < 0 && speed > -200)
+            Z = max(fitRoots) - timeArr(end);
         else
             Z = 0;
         end

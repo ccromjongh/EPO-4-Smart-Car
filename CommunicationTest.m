@@ -2,7 +2,8 @@ clear variables;
 %% Script settings
 comport = '\\.\COM3';       % Name of the port to be opened
 re_open_port = true;       % Close and open port
-max_distance = 40;          % Distance to brake before the object
+max_distance = 39;          % Distance to brake before the object
+roll_distance = 70;
 delay_time = 0.5;           % Delay time in seconds
 EstimationThreshold = 400;  % cm
 minimumSamples = 5;  
@@ -11,6 +12,7 @@ fakeSamplesRemaining = minimumSamples;
 
 % Create instance of control class
 KITT = testClass;
+rolling = false;
 
 if (re_open_port)
     KITT.openPort(comport);
@@ -34,8 +36,8 @@ leftMeasurements = repmat(left, 1, 9999);
 rightMeasurements = repmat(right, 1, 9999);
 
 % Set speed and steering direction
-KITT.setMotorSpeed(30);
-KITT.setSteerDirection(4);
+KITT.setMotorSpeed(27);
+KITT.setSteerDirection(6);
 
 
 %% Fake measurement injection
@@ -61,6 +63,7 @@ while (true)
     left.t = toc;
     right.d = KITT.rightDistance;
     right.t = toc;
+    disp(['time is ' num2str(toc)]);
     
     % Ignore previous sensor values that are out of range to keep speed realistic
     if (left.d >= EstimationThreshold)
@@ -86,6 +89,7 @@ while (true)
     
     % If we still got fake measurements, remove them
     if (fakeSamplesRemaining >= 1)
+        disp(['Fakesamples = ' num2str(fakeSamplesRemaining)]);
         % Remove fake measurement
         leftMeasurements = leftMeasurements(2:end);
         rightMeasurements = rightMeasurements(2:end);
@@ -117,48 +121,16 @@ while (true)
         
         %% Right Fitting
         
-        %fR = fit(tR,dR,'poly2', 'Robust', 'Bisquare');
-        fR = polyfit(tR, dR, 2);
-        derivR = polyder(fR);
-        totalDistance = max_distance + polyval(derivR, tR(end))^2/500;
-        
-        %fR.p1 = fR.p1 - totalDistance;
-        fR(end) = fR(end) - totalDistance;
-        rootsR = roots(fR);
-        % Only take real values
-        rootsR = rootsR(real(rootsR)>0&imag(rootsR)==0);
-        
-        if (~isempty(rootsR))
-            if(max(rootsR) > 0.5)
-                zr = max(rootsR) - tR(end);
-            else
-                zr = 0;
-            end
-        else
-            zr = 0;
-        end
+        [zr, fR] = fitFunction(tR, dR, max_distance);
         
         %% Left fitting
         
-        %fL = fit(tL,dL,'poly2', 'Robust', 'Bisquare');
-        fL = polyfit(tL, dL, 2);
-        derivL = polyder(fL);
-        totalDistance = max_distance + polyval(derivL, tL(end)^2/500);
+        [zl, fL] = fitFunction(tL, dL, max_distance);
         
-        %fL.p1 = fL.p1 - totalDistance;
-        fL(end) = fL(end) - totalDistance;
-        rootsL = roots(fL);
-        % Only take real values
-        rootsL = rootsL(real(rootsL)>0&imag(rootsL)==0);
-        
-        if (~isempty(rootsL))
-            if(max(rootsL) > 0.5)
-                zl = max(rootsL) - tL(end);
-            else
-                zl = 0;
-            end
-        else
-            zl = 0;
+        %% Roll out if closer than roll_distance
+        if (~rolling && (polyval(fR, tR(end) + delay_time) < roll_distance || polyval(fL, tL(end) + delay_time) < roll_distance))
+            KITT.setMotorSpeed(15);
+            rolling = true;
         end
     else
         zr = 0;
@@ -177,10 +149,12 @@ while (true)
 end
 
 %% Brake!
+brakeTime = toc;
 KITT.setMotorSpeed(0);
-pause(0.3);
+pause(0.25);
 
 %% Final measurement
+endTime = toc;
 KITT.getDistance();
 %printStatus(left,right);
 
@@ -188,16 +162,23 @@ KITT.getDistance();
 % Set motor to neutral
 KITT.setMotorSpeed(15);
 
-%KITT.getDistance();
-%printStatus(left,right);
+pause(0.25);
+
+KITT.getDistance();
+fprintf('\nFinal distance: L %d cm, R %d cm\nBrake time was %.2f s, final time %.2f s\n', KITT.leftDistance, KITT.rightDistance, brakeTime, endTime);
 
 % Close port to free usage
 KITT.closePort();
 
 %% Plot results
+tRAll = double([rightMeasurements(1:index).t]);
+tLAll = double([leftMeasurements(1:index).t]);
+dRAll = [rightMeasurements(1:index).d];
+dLAll = [leftMeasurements(1:index).d];
+
 N = index - 1;
-x = [leftMeasurements(1:N).d; rightMeasurements(1:N).d];
-y = double([leftMeasurements(1:N).t]);
+x = [dLAll; dRAll];
+y = double(tLAll);
 figure(1);
 plot(y, x);
 ylim([0 400]);
@@ -211,17 +192,34 @@ timeMax = min(tL(end), tR(end));
 tFit = timeMin:0.05:timeMax;
 fitR = polyval(fR, tFit);
 fitL = polyval(fL, tFit);
+velociR = polyval(polyder(fR), tFit);
+velociL = polyval(polyder(fL), tFit);
 
 figure(2);
-subplot(2,1,1);
-plot(tFit, fitL, tL, dL);
+subplot(2, 1, 1);
+plot(tFit, fitL, tL, dL, 'X', tLAll, dLAll);
 ylim([0 400]);
 title('Left Sensor Fitting');
 xlabel('Time (s)');
 ylabel('Distance from object (cm)');
-subplot(2,1,2);
-plot(tFit, fitR, tR, dR);
+
+subplot(2, 1, 2);
+plot(tFit, fitR, tR, dR, 'X', tRAll, dRAll);
 ylim([0 400]);
 title('Right Sensor Fitting');
 xlabel('Time (s)');
 ylabel('Distance from object (cm)');
+
+figure(3);
+subplot(2, 1, 1);
+plot(tFit, velociL);
+ylim([-160 0]);
+title('Left Sensor Speed');
+xlabel('Time (s)');
+ylabel('Speed (cm/s)');
+subplot(2,1,2);
+plot(tFit, velociR);
+ylim([-160 0]);
+title('Right Sensor Speed');
+xlabel('Time (s)');
+ylabel('Speed (cm/s)');
