@@ -1,16 +1,15 @@
 clear variables;
 %Fs = 37800;    % A more standard sampling rate
 Fs = 34029;     % Exactly speed of sound in cm/s
-Fs_TX = 44100;  % Standard CD sample rate
-nrep = 10;      % Repetitions of training signal
-[y, x, xx, x0] = send_refsignal(nrep, Fs, 1);
+%Fs_TX = 44100;  % Standard CD sample rate
+%nrep = 10;      % Repetitions of training signal
+%[y, x, xx, x0] = send_refsignal(nrep, Fs, 1);
 
 comport = 'COM3';       % Name of the port to be opened
 re_open_port = true;    % Close and open port
 
 % Create instance of control class
 KITT = testClass;
-rolling = false;
 
 if (re_open_port)
     KITT.openPort(comport);
@@ -18,7 +17,8 @@ end
 
 KITT.setupBeacon(30000, 5000, 50, '983BD2C4');
 KITT.toggleBeacon(true);
-record_data = recordfun(2, 1);
+y = recordfun(2, 1);
+KITT.toggleBeacon(false);
 
 %% Plot recorded data
 figure(2);
@@ -45,8 +45,9 @@ plot_amplitude(Y, 'Y', 'Amplitude of recording', '');
 
 %% Plot calculated impulse response
 figure(3);
-% h = ch3(x, y);
-h = ch3(y(:, 1), y(:, 2));  % Calculate imulse response from recording
+% h = channelEst(x, y, 600, true);
+h = channelEst(y(:, 1), y(:, 2), 600, true);  % Calculate imulse response from recording
+
 [maxH, maxHIndex] = max(abs(h));
 endH = min(2 * maxHIndex, length(h));   % Endpoint of time axis to give a sensible plot
 th = (0:(endH - 1))/Fs;     % Create h time axis
