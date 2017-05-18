@@ -47,6 +47,14 @@ classdef testClass<handle
             EPOCommunications('transmit', ['C0x' SecretCode]);      % Set the audio code
         end
         
+        function obj = toggleBeacon(obj, toggle)
+           if (toggle)
+               EPOCommunications('transmit', 'A1');
+           else
+               EPOCommunications('transmit', 'A0');
+           end
+        end
+        
         % Function to set the steering direction of KITT
         % Param: `direction` between [-50, 50]
         function obj = setSteerDirection (obj, direction)
