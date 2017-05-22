@@ -1,12 +1,22 @@
 clear variables;
 Fs = 48000;
-load 'audiodata_A11.mat';
 
 nchan = 5;
 max_distance = 400;
-use_measurement = 1;
+use_measurement = 5;
 Vs = 340.29;
+do_absolute = true;
 
+
+% Get reference audio
+load 'audiodata_A11_2.mat';
+x = zeros(length(RXXr), nchan);
+for i = 1:nchan
+    x(:, i) = RXXr(i,:,i)';
+end
+
+% Get audio from point
+load 'audiodata_A11.mat';
 y = squeeze(RXXr(use_measurement,:,:));
 
 
@@ -26,10 +36,12 @@ for i = 1:nchan
     signal_start(i) = find(abs(y(:, i)) > start_threshold, 1);
 end
 abs_start = min(signal_start) - 20;
-if (abs_start < 1); abs_start = 1; end;
+if (abs_start < 1); abs_start = 1; end
 
 signal_start = signal_start - abs_start;
-y = y(abs_start:end, :);
+if (~do_absolute)
+    y = y(abs_start:end, :);
+end
 clear start_threshold;
 
 % Create time axis
@@ -79,7 +91,14 @@ end
 clear temp holder i j;
 
 % h = channelEst(x, y, max_distance, true);
-h = channelEst(y, 1, max_distance, true);  % Calculate imulse response from recording
+if (do_absolute)
+    % Calculate imulse response from recording using another recording as
+    % reference
+    h = channelEst(y, x, max_distance, true);
+else
+    % Calculate imulse response from recording, relatively
+    h = channelEst(y, 1, max_distance, true);
+end
 
 [maxH, maxHIndex] = max(h);
 [psor,lsor] = findpeaks(h(:, 2), 'SortStr', 'descend');
@@ -87,12 +106,18 @@ distance = maxHIndex * Vs * 100 / Fs;
 
 endH = min(2 * maxHIndex, length(h));   % Endpoint of time axis to give a sensible plot
 for i = 1:nchan
-    th = (0:(endH(i) - 1))/Fs;     % Create h time axis
+    th = (0:(endH(i) - 1))/Fs;          % Create h time axis
     subplot(nchan, 1, i);
-    stem(th, h(1:endH(i), i));        % Plot impulse response
+    hold off;
+    stem(th, h(1:endH(i), i));          % Plot impulse response
+    hold on;
+    p = stem((maxHIndex(i)-1)/Fs, maxH(i));
+    p.LineWidth = 1.05;
     title_str = sprintf('Mic %d with relative distance %.2f cm', mic(i), distance(i));
     title(title_str);
     ylabel('Amplitude');
     xlabel('Time [s]');
 end
 clear title_str;
+
+playfield_plot(distance, mic);

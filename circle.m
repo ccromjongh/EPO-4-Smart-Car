@@ -6,5 +6,6 @@ function circle(x,y,r)
     ang = 0:0.01:2*pi;
     xp = r*cos(ang);
     yp = r*sin(ang);
-    plot(x+xp,y+yp);
+    plot(x+xp, y+yp, 'LineWidth', 1.05);
+    %p.LineWidth = 1.05;
 end

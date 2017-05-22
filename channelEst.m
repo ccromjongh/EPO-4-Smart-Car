@@ -29,17 +29,36 @@ function h = channelEst(gy, use_reference, L_cap, filter)
     % Execute FFT
     Y = fft(gy);
     
+    [Nx, refDim] = size(use_reference);
+    if (Nx > Ny)
+    	use_reference = use_reference(1:Ny, :);
+    elseif (Nx < Ny)
+    	use_reference = cat(1, use_reference, zeros(Ny - Nx, refDim));
+    end
     
-    %Y = fft(gy + 2);
-    %X = fft([gx; zeros(Ny - Nx,1)] + 2); % zero padding to length Ny
+    X = [];
+    if (Nx > 1)
+        X = fft(use_reference);
+    end
 
     % frequency domain deconvolution
     H = complex(zeros(Ny,  1));
     gh = zeros(Ny,  dim);
     
     for i = 1:dim
-        H = rdivide(Y(:, use_reference), Y(:, i));
-        gh(:, i) = ifft(H);
+        % Multidimensional reference
+        if (refDim == dim)
+            H = rdivide(X(:, i), Y(:, i));
+            gh(:, i) = ifft(H);
+        % Single reference
+        elseif (Nx > 1)
+            H = rdivide(X, Y(:, i));
+            gh(:, i) = ifft(H);
+        % Reference as selection of data (relative)
+        else
+            H = rdivide(Y(:, use_reference), Y(:, i));
+            gh(:, i) = ifft(H);
+        end
     end
     
     if (L < length(gh))
