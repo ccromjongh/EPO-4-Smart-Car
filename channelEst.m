@@ -30,10 +30,12 @@ function h = channelEst(gy, use_reference, L_cap, filter)
     Y = fft(gy);
     
     [Nx, refDim] = size(use_reference);
-    if (Nx > Ny)
-    	use_reference = use_reference(1:Ny, :);
-    elseif (Nx < Ny)
-    	use_reference = cat(1, use_reference, zeros(Ny - Nx, refDim));
+    if (Nx > 1)
+        if (Nx > Ny)
+            use_reference = use_reference(1:Ny, :);
+        elseif (Nx < Ny)
+            use_reference = cat(1, use_reference, zeros(Ny - Nx, refDim));
+        end
     end
     
     X = [];

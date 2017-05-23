@@ -3,9 +3,9 @@ Fs = 48000;
 
 nchan = 5;
 max_distance = 400;
-use_measurement = 5;
+use_measurement = 1;
 Vs = 340.29;
-do_absolute = true;
+do_absolute = false;
 
 
 % Get reference audio
