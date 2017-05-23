@@ -31,8 +31,8 @@ function h = channelEst(gx, gy, L_cap, filter)
     X = fft([gx; zeros(Ny - Nx,1)]); % zero padding to length Ny
     
     
-    Y = fft(gy + 2);
-    X = fft([gx; zeros(Ny - Nx,1)] + 2); % zero padding to length Ny
+    %Y = fft(gy + 2);
+    %X = fft([gx; zeros(Ny - Nx,1)] + 2); % zero padding to length Ny
 
     % frequency domain deconvolution
     % H = mrdivide(Y, X);
@@ -41,7 +41,7 @@ function h = channelEst(gx, gy, L_cap, filter)
     if (L < length(gh))
         gh = gh(1:L);
     end
-    wait(gpuDevice(1));
+    %wait(gpuDevice(1));
     
     h = gather(gh);
 end
