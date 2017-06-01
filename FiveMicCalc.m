@@ -1,22 +1,24 @@
 clear variables;
-Fs = 48000;
+Fs = 44100;
 
 nchan = 5;
 max_distance = 400;
-use_measurement = 1;
+use_measurement = 6;
 Vs = 340.29;
 do_absolute = false;
 
 
-% Get reference audio
-load 'audiodata_A11_2.mat';
-x = zeros(length(RXXr), nchan);
-for i = 1:nchan
-    x(:, i) = RXXr(i,:,i)';
-end
+% % Get reference audio
+% load 'audiodata_reference.mat';
+% x = zeros(length(RXXr), nchan);
+% for i = 1:nchan
+%     x(:, i) = RXXr(i,:,i)';
+% end
+
+load 'single_reference.mat';
 
 % Get audio from point
-load 'audiodata_A11.mat';
+load 'audiodata_ABCD2.mat';
 y = squeeze(RXXr(use_measurement,:,:));
 
 

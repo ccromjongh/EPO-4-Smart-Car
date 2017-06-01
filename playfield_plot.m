@@ -17,7 +17,7 @@ hold off;
 subplot(1,1,1);
 
 p = plot([field_data.mics.x], [field_data.mics.y], 'o');
-axis([0, field_data.field.x, 0, field_data.field.y]);
+axis([field_data.field.x_min, field_data.field.x_max, field_data.field.y_min, field_data.field.y_max]);
 p.LineWidth = 2;
 p.MarkerSize = 14;
 p.MarkerFaceColor = 'white';
@@ -26,7 +26,6 @@ text([field_data.mics.x] - 2, [field_data.mics.y], num2str((1:numel(field_data.m
 hold on;
 
 p = plot([field_data.marks.x], [field_data.marks.y], 'x');
-axis([0, field_data.field.x, 0, field_data.field.y]);
 p.LineWidth = 2;
 p.MarkerSize = 14;
 p.MarkerFaceColor = 'white';
