@@ -1,12 +1,18 @@
 clear variables;
-Fs = 44100;
+Fs = 48000;
 
 nchan = 5;
-max_distance = 400;
-use_measurement = 6;
+max_distance = 500;
+min_distance = 50;
+use_measurement = 4;
+checkpoint = floor((use_measurement+1)/2);
 Vs = 340.29;
-do_absolute = false;
+do_absolute = true;
 
+
+JSON = fileread('field.json');
+field_data = jsondecode(JSON);
+clear JSON;
 
 % % Get reference audio
 % load 'audiodata_reference.mat';
@@ -15,11 +21,15 @@ do_absolute = false;
 %     x(:, i) = RXXr(i,:,i)';
 % end
 
-load 'single_reference.mat';
+load 'new_reference.mat';
 
 % Get audio from point
-load 'audiodata_ABCD2.mat';
-y = squeeze(RXXr(use_measurement,:,:));
+load 'audiodata_playrec.mat';
+y = squeeze(RXXr(use_measurement, :, :));
+clear RXXr;
+
+radii = sqrt((field_data.marks(checkpoint).x - [field_data.mics.x]).^2 + (field_data.marks(checkpoint).y - [field_data.mics.y]).^2);
+expected = radii/(100*Vs);
 
 
 %% Plot recorded data
@@ -68,7 +78,8 @@ for i = 1:nchan
 end
 
 
-%% Plot calculated impulse response
+%% Sort signals based on amplitude time detection
+tic;
 figure(2);
 
 original = signal_start;
@@ -92,6 +103,9 @@ for i = 1:nchan
 end
 clear temp holder i j;
 
+
+%% Do channel estimation
+
 % h = channelEst(x, y, max_distance, true);
 if (do_absolute)
     % Calculate imulse response from recording using another recording as
@@ -102,19 +116,34 @@ else
     h = channelEst(y, 1, max_distance, true);
 end
 
-[maxH, maxHIndex] = max(h);
+if do_absolute
+    [maxH, maxHIndex] = max(h(min_distance:end, :));
+    maxHIndex = maxHIndex + min_distance;
+else
+    [maxH, maxHIndex] = max(h);
+end
 [psor,lsor] = findpeaks(h(:, 2), 'SortStr', 'descend');
 distance = maxHIndex * Vs * 100 / Fs;
+time = maxHIndex / Fs;
+Performace = toc;
+expectedIndex = round(expected*Fs);
 
-endH = min(2 * maxHIndex, length(h));   % Endpoint of time axis to give a sensible plot
+%% Plot impulse response
+
+%endH = min(2 * maxHIndex, length(h));   % Endpoint of time axis to give a sensible plot
+endH = repmat(max_distance, 1, 5);
 for i = 1:nchan
     th = (0:(endH(i) - 1))/Fs;          % Create h time axis
     subplot(nchan, 1, i);
     hold off;
     stem(th, h(1:endH(i), i));          % Plot impulse response
     hold on;
+    
     p = stem((maxHIndex(i)-1)/Fs, maxH(i));
     p.LineWidth = 1.05;
+    ylim([0 1.1]);
+    plot([expected(i) expected(i)], [0 2], '--', 'LineWidth', 1.05);
+    
     title_str = sprintf('Mic %d with relative distance %.2f cm', mic(i), distance(i));
     title(title_str);
     ylabel('Amplitude');

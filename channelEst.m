@@ -15,7 +15,7 @@ function h = channelEst(gy, use_reference, L_cap, filter)
 
     % Used for filtering out low-energy noise
     if (filter)
-        eps = 0.1;
+        eps = 0.5;
         ii = abs(gy) <= eps;
         gy(ii) = 0;
     end
@@ -27,7 +27,11 @@ function h = channelEst(gy, use_reference, L_cap, filter)
     end
     
     % Execute FFT
-    Y = fft(gy);
+    Ny = 1E6;
+    Y = complex(zeros(Ny, dim));
+    for ii = 1:dim
+        Y(:, ii) = fft(gy(:, ii), Ny);
+    end
     
     [Nx, refDim] = size(use_reference);
     if (Nx > 1)
@@ -40,7 +44,10 @@ function h = channelEst(gy, use_reference, L_cap, filter)
     
     X = [];
     if (Nx > 1)
-        X = fft(use_reference);
+        X = complex(zeros(Ny, refDim));
+        for ii = 1: refDim
+            X(:, ii) = fft(use_reference(:, ii), Ny);
+        end
     end
 
     % frequency domain deconvolution
@@ -51,20 +58,30 @@ function h = channelEst(gy, use_reference, L_cap, filter)
         % Multidimensional reference
         if (refDim == dim)
             H = rdivide(X(:, i), Y(:, i));
-            gh(:, i) = ifft(H);
+            gh(:, i) = abs(ifft(H));
         % Single reference
         elseif (Nx > 1)
             H = rdivide(X, Y(:, i));
-            gh(:, i) = ifft(H);
+            gh(:, i) = abs(ifft(H));
         % Reference as selection of data (relative)
         else
             H = rdivide(Y(:, use_reference), Y(:, i));
-            gh(:, i) = ifft(H);
+            gh(:, i) = abs(ifft(H));
         end
     end
     
     if (L < length(gh))
-        gh = abs(gh(1:L, :));
+        gh = gh(1:L, :);
+    end
+    
+    for i = 1:dim
+       gh(:, i) = gh(:, i)/max(gh(:, i)); 
+    end
+    
+    if (filter)
+        eps = 0.35;
+        ii = gh <= eps;
+        gh(ii) = 0;
     end
     %wait(gpuDevice(1));
     
