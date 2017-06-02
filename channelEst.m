@@ -1,4 +1,4 @@
-function h = channelEst(gx, gy, L_cap, filter)
+function h = channelEst(gy, use_reference, L_cap, filter)
     if nargin < 3
         L_cap = false;
     end
@@ -9,39 +9,64 @@ function h = channelEst(gx, gy, L_cap, filter)
     
     %gx = gpuArray(x);
     %gy = gpuArray(y);
+    
+    % Get lengths of arrays
+    [Ny, dim] = size(gy);
 
     % Used for filtering out low-energy noise
     if (filter)
-        max_singal_val = max(gx);
-        eps = max_singal_val * 0.01;
-        ii = abs(gx) <= eps;
-        gx(ii) = 0;
+        eps = 0.1;
+        ii = abs(gy) <= eps;
+        gy(ii) = 0;
     end
 
-    % Get lengths of arrays
-    Ny = length(gy); Nx = length(gx);
     if (isnumeric(L_cap))
         L = L_cap;
     else
-        L = Ny - Nx + 1;
+        L = 1000;
     end
     
     % Execute FFT
     Y = fft(gy);
-    X = fft([gx; zeros(Ny - Nx,1)]); % zero padding to length Ny
     
+    [Nx, refDim] = size(use_reference);
+    if (Nx > 1)
+        if (Nx > Ny)
+            use_reference = use_reference(1:Ny, :);
+        elseif (Nx < Ny)
+            use_reference = cat(1, use_reference, zeros(Ny - Nx, refDim));
+        end
+    end
     
-    Y = fft(gy + 2);
-    X = fft([gx; zeros(Ny - Nx,1)] + 2); % zero padding to length Ny
+    X = [];
+    if (Nx > 1)
+        X = fft(use_reference);
+    end
 
     % frequency domain deconvolution
-    % H = mrdivide(Y, X);
-    H = rdivide(Y, X);
-    gh = ifft(H);
-    if (L < length(gh))
-        gh = gh(1:L);
+    H = complex(zeros(Ny,  1));
+    gh = zeros(Ny,  dim);
+    
+    for i = 1:dim
+        % Multidimensional reference
+        if (refDim == dim)
+            H = rdivide(X(:, i), Y(:, i));
+            gh(:, i) = ifft(H);
+        % Single reference
+        elseif (Nx > 1)
+            H = rdivide(X, Y(:, i));
+            gh(:, i) = ifft(H);
+        % Reference as selection of data (relative)
+        else
+            H = rdivide(Y(:, use_reference), Y(:, i));
+            gh(:, i) = ifft(H);
+        end
     end
-    wait(gpuDevice(1));
+    
+    if (L < length(gh))
+        gh = abs(gh(1:L, :));
+    end
+    %wait(gpuDevice(1));
     
     h = gather(gh);
 end

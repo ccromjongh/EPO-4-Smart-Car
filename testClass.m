@@ -15,7 +15,11 @@ classdef testClass<handle
         % Param: `comport`, string
         function obj = openPort (obj, comport)
             if (~strcmp(obj.currentPortName, comport))          % Only act if string is different
-                EPOCommunications('close');                     % If port was open, close it first
+                try
+                    EPOCommunications('close');                     % If port was open, close it first
+                catch
+                    
+                end
                 pause(0.1);
                 obj.portIsOpen = false;
                 result = EPOCommunications('open', comport);    % Open connection
@@ -45,6 +49,14 @@ classdef testClass<handle
             R_count = Timer1/Timer3;
             EPOCommunications('transmit', ['R' num2str(R_count)]);	% Set the repetition count
             EPOCommunications('transmit', ['C0x' SecretCode]);      % Set the audio code
+        end
+        
+        function obj = toggleBeacon(obj, toggle)
+           if (toggle)
+               EPOCommunications('transmit', 'A1');
+           else
+               EPOCommunications('transmit', 'A0');
+           end
         end
         
         % Function to set the steering direction of KITT
