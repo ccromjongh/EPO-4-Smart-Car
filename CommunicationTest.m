@@ -209,7 +209,7 @@ ylim([0 400]);
 title('Right Sensor Fitting');
 xlabel('Time (s)');
 ylabel('Distance from object (cm)');
-
+ccc
 figure(3);
 subplot(2, 1, 1);
 plot(tFit, velociL);
