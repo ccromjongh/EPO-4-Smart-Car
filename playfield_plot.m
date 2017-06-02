@@ -18,6 +18,7 @@ subplot(1,1,1);
 
 p = plot([field_data.mics.x], [field_data.mics.y], 'o');
 axis([field_data.field.x_min, field_data.field.x_max, field_data.field.y_min, field_data.field.y_max]);
+pbaspect([(field_data.field.x_max - field_data.field.x_min) (field_data.field.y_max - field_data.field.y_min) 1])
 p.LineWidth = 2;
 p.MarkerSize = 14;
 p.MarkerFaceColor = 'white';

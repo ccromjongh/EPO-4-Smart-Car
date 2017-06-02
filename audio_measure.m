@@ -37,17 +37,10 @@ if ~isnumeric(nMicrop), error('nMicrop must be an integer '); end
 if ~isnumeric(nLoop), error('nLoop must be an integer '); end
 if ~isnumeric(Nrp), error('Nrp must be a real '); end
 
-% arrays to match Timerx to frequencies (Hz)
-% FF0 = [0 5 10 15 20 25 30]*1e3; f_c
-% FF1 = [1 1.5 2 2.5 3 3.5 4 4.5 5]*1e3; f_b
-% FF3 = [1 2 3 4 5 6 7 8 9 10];f_r
-% Ncodebits = 32;
-% % compute corresponding frequencies (Hz)
-% f_c = FF0(Timer0+2);	% (also allow for '-1' as input)
-% f_b = FF1(Timer1+1);
-% f_r = FF3(Timer3+1);
 
-%pause(1);
+
+KITT.toggleBeacon(false);
+pause(0.1);
 KITT.setupBeacon(Timer0, Timer1, Timer3, code);
 
 % Convert hex code string into binary string
@@ -59,8 +52,31 @@ for ii = 1:length(code)
 end
 
 % Length of data segment
-Trec = (Nrp - 0.2)/Timer3;              % Record data segment length
-nSamplesRec = floor(Trec*Fs);	% The number of samples of the recorded data (one data segment)
+Trec = Nrp/Timer3 + 0.1;              % Record data segment length
+Tbeacon = (Nrp - 0.2)/Timer3;              % Time the beacon should stay on
+sampleCount = floor(Trec*Fs);           % The number of samples of the recorded data (one data segment)
+
+
+%% Initialise audio device
+if playrec('isInitialised')
+    playrec('reset');
+end
+
+devs = playrec('getDevices');
+for id = 1:size(devs,2)
+    if(strcmp('AudioBox ASIO Driver', devs(id).name))
+        break;
+    end
+end
+devId = devs(id).deviceID;
+
+playrec('init', Fs, -1, devId);
+
+if ~playrec('isInitialised')
+    error ('Failed to initialise device at any sample rate');
+end
+
+RXXr = zeros(nLoop, sampleCount, nMicrop);
 
 
 %% Repeatedly measure, save the measurements
@@ -70,35 +86,60 @@ for nRun = 1:nLoop
     if reply == 'q'
         break;
     end
-    % pause(1); % wait for ASIO driver
+    
     fprintf('Measurement %d\n',nRun);
 
     % parameters for transmitting and receiving with the soundcard
-    playdevice = 0;
-    samplerate = Fs;
-    recfirstchannel = 1;
-    reclastchannel = recfirstchannel+nMicrop-1;
-    recdevice = 1;
-    devicetype = 'asio';
-
-    KITT.toggleBeacon(true);	% switch on audio beacon
+%     playdevice = 0;
+%     samplerate = Fs;
+%     recfirstchannel = 1;
+%     reclastchannel = recfirstchannel+nMicrop-1;
+%     recdevice = 1;
+%     devicetype = 'asio';
+%     
+%     KITT.toggleBeacon(true);	% switch on audio beacon
+%     
+%     % RXr: matrix which contains the signal received by each microphone, each
+%     % column corresponse to one microphone
+%     RXr = pa_wavrecord(recfirstchannel, reclastchannel, nSamplesRec, samplerate, recdevice); %, recdevice, devicetype);
+%     KITT.toggleBeacon(false);   % switch off audio beacon
     
-    % RXr: matrix which contains the signal received by each microphone, each
-    % column corresponse to one microphone
-    RXr = pa_wavrecord(recfirstchannel, reclastchannel, nSamplesRec, samplerate, recdevice); %, recdevice, devicetype);
-    KITT.toggleBeacon(false);   % switch off audio beacon
+    
+    % start recording in a new buffer page
+    pause(0.1);
+    page = playrec('rec', sampleCount, 1 : nMicrop);
+    
+    tic;
+    KITT.toggleBeacon(true);
+    
+    % Wait till recording is done 
+    while(~playrec('isFinished'))
+        % Toggle beacon off when it has completed it's Nrp cycles
+        if (toc > Tbeacon)
+           KITT.toggleBeacon(false); 
+        end
+        % Pause 5 milliseconds just because
+        pause(0.005);
+    end
+    
+    if (toc > Tbeacon)
+       KITT.toggleBeacon(false); 
+    end
+    
+    y = double(playrec('getRec', page)); % get the data
+
+    playrec('delPage');
+    
 
     % Save the raw data in the data matrix, RXXr is a 3D matrix, RXXr(N_Loop, data_segment, nMicrop)
-    RXXr(nRun,:,:) = RXr;  
+    RXXr(nRun,:,:) = y;  
 
     % Show the raw data
     for jj = 1:nMicrop
         figure(jj);
-        plot(RXr(:,jj));
+        plot(y(:, jj));
         grid on;
     end
-
-    % Can quit during the run
 end
 
 %% Save all the data and parameters code,Fs,nMicrop,nLoop,Nrp 
