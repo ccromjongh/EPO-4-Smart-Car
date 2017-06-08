@@ -11,7 +11,7 @@ function h = channelEst(gy, use_reference, L_cap, filter)
     %gy = gpuArray(y);
     
     % Get lengths of arrays
-    [Ny, dim] = size(gy);
+    [Ny, dim] = size(gy); %#ok<ASGLU>
 
     % Used for filtering out low-energy noise
     if (filter)
