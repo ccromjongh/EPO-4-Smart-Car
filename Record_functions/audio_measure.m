@@ -58,7 +58,7 @@ sampleCount = floor(Trec*Fs);           % The number of samples of the recorded 
 
 
 %% Initialise audio device
-initialise_audio_box(true);
+initialise_audio_box(Fs, true);
 
 if ~playrec('isInitialised')
     error ('Audio device must be initialised');

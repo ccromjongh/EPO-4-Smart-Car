@@ -55,57 +55,55 @@ sampleCount = floor(Trec*Fs);           % The number of samples of the recorded 
 
 
 %% Initialise audio device
-initialise_audio_box(true);
+initialise_audio_box(Fs, true);
 
 if ~playrec('isInitialised')
     error ('Audio device must be initialised');
 end
 
 
-%% Repeatedly measure, save the measurements
+%% Measure, save the measurement
 
-for nRun = 1:nLoop
-    reply = input('Press q to quit, any other key to start the measurements.\n', 's');
-    if reply == 'q'
-        break;
-    end
-    
-    
-    % start recording in a new buffer page
-    pause(0.1);
-    page = start_record(Fs, sampleCount);
-    
-    tic;
-    KITT.toggleBeacon(true);
-    
-    % Wait till recording is done 
-    while(~playrec('isFinished'))
-        % Toggle beacon off when it has completed it's Nrp cycles
-        if (toc > Tbeacon)
-           KITT.toggleBeacon(false); 
-        end
-        % Pause 5 milliseconds just because
-        pause(0.005);
-    end
-    
+reply = input('Press q to quit, any other key to start the measurements.\n', 's');
+if reply == 'q'
+    return;
+end
+
+
+% start recording in a new buffer page
+pause(0.1);
+page = start_record(Fs, sampleCount);
+
+tic;
+KITT.toggleBeacon(true);
+
+% Wait till recording is done 
+while(~playrec('isFinished'))
+    % Toggle beacon off when it has completed it's Nrp cycles
     if (toc > Tbeacon)
        KITT.toggleBeacon(false); 
     end
-    
-    y = get_record(page);
+    % Pause 5 milliseconds just because
+    pause(0.005);
+end
 
-    % Show the raw data
-    for jj = 1:nMicrop
-        figure(jj);
-        plot(y(:, jj));
-        grid on;
-    end
+if (toc > Tbeacon)
+   KITT.toggleBeacon(false); 
+end
+
+y = get_record(page);
+
+% Show the raw data
+for jj = 1:nMicrop
+    figure(jj);
+    plot(y(:, jj));
+    grid on;
 end
 
 evalin('base', ['Timer0 = ' num2str(Timer0) ';']);
 evalin('base', ['Timer1 = ' num2str(Timer1) ';']);
-evalin('base', ['Timer2 = ' num2str(Timer2) ';']);
-evalin('base', ['code = ' num2str(code) ';']);
+evalin('base', ['Timer3 = ' num2str(Timer3) ';']);
+evalin('base', ['code = ''' code ''';']);
 evalin('base', ['Fs = ' num2str(Fs) ';']);
 evalin('base', ['Nrp = ' num2str(Nrp) ';']);
 evalin('base', ['Trec = ' num2str(Trec) ';']);

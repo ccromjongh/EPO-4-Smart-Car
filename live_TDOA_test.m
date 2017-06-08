@@ -1,54 +1,66 @@
 clear variables;
-Fs = 96000;
+% Fs = 96000;
 
 nchan = 5;
 max_distance = 500;
 min_distance = 50;
-use_measurement = 4;
 checkpoint = 1;
 Vs = 340.29;
 do_absolute = true;
+demo_mode = true;
+KITT = testClass;
 
-
-JSON = fileread('field.json');
+JSON = fileread('field_K.json');
 field_data = jsondecode(JSON);
 clear JSON;
 
-load '96000_reference.mat';
+load audiodata_96k.mat;
+
+
+Trec = Nrp/Timer3 + 0.1;                % Record data segment length
+Tbeacon = (Nrp - 0.2)/Timer3;           % Time the beacon should stay on
+sampleCount = floor(Trec*Fs);           % The number of samples of the recorded data (one data segment)
 
 %% Initialise and start recording
 
-initialise_audio_box(true);
+if (~demo_mode)
+    initialise_audio_box(Fs, true);
 
-% Set up beacon
-KITT.toggleBeacon(false);
-pause(0.1);
-KITT.setupBeacon(Timer0, Timer1, Timer3, code);
+    % Set up beacon
+    KITT.toggleBeacon(false);
+    pause(0.1);
+    KITT.setupBeacon(Timer0, Timer1, Timer3, code);
 
-pause(0.1);
+    pause(0.1);
 
-page = start_record(Fs, sampleCount);
+    page = start_record(Fs, sampleCount);
 
-tic;
-% Turn on beacon
-KITT.toggleBeacon(true);
+    tic;
+    % Turn on beacon
+    KITT.toggleBeacon(true);
 
-% Wait till recording is done 
-while(~playrec('isFinished'))
-    % Toggle beacon off when it has completed it's N cycles
+    % Wait till recording is done 
+    while(~playrec('isFinished'))
+        % Toggle beacon off when it has completed it's N cycles
+        if (toc > Tbeacon)
+           KITT.toggleBeacon(false); 
+        end
+        % Pause 5 milliseconds just because
+        pause(0.005);
+    end
+
     if (toc > Tbeacon)
        KITT.toggleBeacon(false); 
     end
-    % Pause 5 milliseconds just because
-    pause(0.005);
-end
 
-if (toc > Tbeacon)
-   KITT.toggleBeacon(false); 
+    % Get data
+    y = get_record(page);
+    
+    % Save recording for later use in demo_mode
+    save('Recordings/last_TDOA_rec.mat', 'y');
+else
+    load('Recordings/last_TDOA_rec.mat');
 end
-
-% Get data
-y = get_record(page);
 
 % Get expected values of the distances
 radii = sqrt((field_data.marks(checkpoint).x - [field_data.mics.x]).^2 + (field_data.marks(checkpoint).y - [field_data.mics.y]).^2);
@@ -127,51 +139,66 @@ end
 clear temp holder i j;
 
 
-%% Do channel estimation
+% %% Do channel estimation
+% 
+% % h = channelEst(x, y, max_distance, true);
+% if (do_absolute)
+%     % Calculate imulse response from recording using another recording as
+%     % reference
+%     h = channelEst(y, x, max_distance, true);
+% else
+%     % Calculate imulse response from recording, relatively
+%     h = channelEst(y, 1, max_distance, true);
+% end
+% 
+% if do_absolute
+%     [maxH, maxHIndex] = max(h(min_distance:end, :));
+%     maxHIndex = maxHIndex + min_distance;
+% else
+%     [maxH, maxHIndex] = max(h);
+% end
+% [psor,lsor] = findpeaks(h(:, 2), 'SortStr', 'descend');
+% distance = maxHIndex * Vs * 100 / Fs;
+% time = maxHIndex / Fs;
+% Performace = toc;
+% expectedIndex = round(expected*Fs);
+% 
+% %% Plot impulse response
+% 
+% %endH = min(2 * maxHIndex, length(h));   % Endpoint of time axis to give a sensible plot
+% endH = repmat(max_distance, 1, 5);
+% for i = 1:nchan
+%     th = (0:(endH(i) - 1))/Fs;          % Create h time axis
+%     subplot(nchan, 1, i);
+%     hold off;
+%     stem(th, h(1:endH(i), i));          % Plot impulse response
+%     hold on;
+%     
+%     p = stem((maxHIndex(i)-1)/Fs, maxH(i));
+%     p.LineWidth = 1.05;
+%     ylim([0 1.1]);
+%     plot([expected(i) expected(i)], [0 2], '--', 'LineWidth', 1.05);
+%     
+%     title_str = sprintf('Mic %d with relative distance %.2f cm', mic(i), distance(i));
+%     title(title_str);
+%     ylabel('Amplitude');
+%     xlabel('Time [s]');
+% end
+% clear title_str;
 
-% h = channelEst(x, y, max_distance, true);
-if (do_absolute)
-    % Calculate imulse response from recording using another recording as
-    % reference
-    h = channelEst(y, x, max_distance, true);
-else
-    % Calculate imulse response from recording, relatively
-    h = channelEst(y, 1, max_distance, true);
-end
-
-if do_absolute
-    [maxH, maxHIndex] = max(h(min_distance:end, :));
-    maxHIndex = maxHIndex + min_distance;
-else
-    [maxH, maxHIndex] = max(h);
-end
-[psor,lsor] = findpeaks(h(:, 2), 'SortStr', 'descend');
-distance = maxHIndex * Vs * 100 / Fs;
-time = maxHIndex / Fs;
-Performace = toc;
-expectedIndex = round(expected*Fs);
-
-%% Plot impulse response
-
-%endH = min(2 * maxHIndex, length(h));   % Endpoint of time axis to give a sensible plot
-endH = repmat(max_distance, 1, 5);
+figure(3);
 for i = 1:nchan
-    th = (0:(endH(i) - 1))/Fs;          % Create h time axis
-    subplot(nchan, 1, i);
-    hold off;
-    stem(th, h(1:endH(i), i));          % Plot impulse response
+    h(:,i) = ch2(x,y(:,i));
+    subplot(5,1,i);
+    stem(abs(h(:,i))/max(h(:,i)), '.');
     hold on;
-    
-    p = stem((maxHIndex(i)-1)/Fs, maxH(i));
-    p.LineWidth = 1.05;
-    ylim([0 1.1]);
-    plot([expected(i) expected(i)], [0 2], '--', 'LineWidth', 1.05);
-    
-    title_str = sprintf('Mic %d with relative distance %.2f cm', mic(i), distance(i));
-    title(title_str);
-    ylabel('Amplitude');
-    xlabel('Time [s]');
+    [pk,lc] = findpeaks(abs(h(:,i))/max(h(:,i)),'Minpeakheight',0.5);
+    plot(lc(1),pk(1),'x')
+    hold off;
+    Hmax(:,i) = lc(1);
 end
-clear title_str;
+[x_calc y_calc z_calc] = tdoa2(mic, Hmax-Hmax(1)); %#ok<NCOMMA>
 
-playfield_plot(distance, mic);
+distance = zeros(1,5);
+mics = 1:5;
+playfield_plot(distance, mic, x_calc, y_calc);

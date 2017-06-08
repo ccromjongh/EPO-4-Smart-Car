@@ -1,4 +1,4 @@
-function initialise_audio_box(reInit)
+function initialise_audio_box(Fs, reInit)
 
 if (reInit)
     % Reset if already initialised
@@ -9,7 +9,7 @@ end
 
 % Check if device needs to be initialised
 if (reInit || ~playrec('isInitialised'))
-    devId = findAudioDevice();
+    devId = find_audio_device();
 
     % Initialise PlayRec
     playrec('init', Fs, -1, devId);

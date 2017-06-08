@@ -1,13 +1,13 @@
-function playfield_plot (distance, order)
+function playfield_plot (distance, order, x_calc, y_calc)
 distance_between = 20;
-circles = 5;
+circles = 0;
 base_expansion = 120;
 
 if (nargin < 2)
    order = 1:5; 
 end
 
-JSON = fileread('field.json');
+JSON = fileread('field_K.json');
 
 field_data = jsondecode(JSON);
 clear JSON;
@@ -27,6 +27,15 @@ text([field_data.mics.x] - 2, [field_data.mics.y], num2str((1:numel(field_data.m
 hold on;
 
 p = plot([field_data.marks.x], [field_data.marks.y], 'x');
+p.LineWidth = 2;
+p.MarkerSize = 14;
+p.MarkerFaceColor = 'white';
+text([field_data.marks.x] - 3, [field_data.marks.y] + 12, {field_data.marks.label}, 'FontWeight', 'bold');
+
+
+hold on;
+
+p = plot(x_calc, y_calc, '*');
 p.LineWidth = 2;
 p.MarkerSize = 14;
 p.MarkerFaceColor = 'white';

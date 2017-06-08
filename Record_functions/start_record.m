@@ -9,9 +9,9 @@ end
 
 
 if ~isnumeric(Fs), error('Fs must be a real'); end
-if ~isnumeric(nMicrop), error('nMicrop must be an integer'); end
+if ~isnumeric(nMicrophones), error('nMicrop must be an integer'); end
 
-initialise_audio_box(reInit);
+initialise_audio_box(Fs, reInit);
 
 if ~playrec('isInitialised')
     error ('Audio device must be initialised');
