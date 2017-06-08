@@ -105,7 +105,7 @@ subplot(2,1,2);             % Plot frequency data
 Y = fft(y, 9*length(y));    % Calculate Fourier transform of y
 plot_amplitude(Y, 'Y', 'Amplitude of recording', '');
 
-figure(3);
+figure(2);
 for i = 1:nchan
     subplot(nchan, 1, i);
     plot(t, y(:, i));
@@ -115,7 +115,6 @@ end
 
 %% Sort signals based on amplitude time detection
 tic;
-figure(2);
 
 original = signal_start;
 mic = 1:nchan;
@@ -188,16 +187,29 @@ clear temp holder i j;
 
 figure(3);
 for i = 1:nchan
-    h(:,i) = ch2(x,y(:,i));
+    h(:,i) = abs(ch2(x,y(:,i)));
+    h(:,i) = h(:,i)/max(h(:,i));
+    th = (0:(length(h) - 1))/Fs;
+    
     subplot(5,1,i);
-    stem(abs(h(:,i))/max(h(:,i)), '.');
+    stem(th, h(:,i), '.');
+    
+    if (i == 1); title('Channel estimation'); end
+    if (i == nchan); xlabel('Time (s)'); end
+    
     hold on;
-    [pk,lc] = findpeaks(abs(h(:,i))/max(h(:,i)),'Minpeakheight',0.5);
-    plot(lc(1),pk(1),'x')
+    
+    [pk,lc] = findpeaks(h(:,i), 'Minpeakheight', 0.5);
+    p = plot(lc(1)/Fs, pk(1), 'x');
+    p.LineWidth = 1.5;
+    p.MarkerSize = 8;
+    
     hold off;
     Hmax(:,i) = lc(1);
 end
-[x_calc y_calc z_calc] = tdoa2(mic, Hmax-Hmax(1)); %#ok<NCOMMA>
+
+Hdist = Hmax-Hmax(1);
+[x_calc y_calc z_calc] = tdoa2(mic, Hdist); %#ok<NCOMMA>
 
 distance = zeros(1,5);
 mics = 1:5;
