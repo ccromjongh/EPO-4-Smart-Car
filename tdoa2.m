@@ -1,6 +1,5 @@
-function [x y z] = tdoa2(mic_order, Hmax)
-timedelayvec = Hmax/48000;
-mic_position = [-223 -244 58; -223 244 58; 223 244 58; 223 -244 30; 223 -30 78];
+function [x y z] = tdoa2(mic_position, mic_order , Hmax, Fs)
+timedelayvec = Hmax/Fs;
 % sensor index shift of 1 occurrs here
 Sen_position = zeros(5,3);
 for i=1:length(mic_order)

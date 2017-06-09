@@ -47,7 +47,7 @@ for i = 1:nchan
     % Find first element greater than 
     signal_start(i) = find(abs(y(:, i)) > start_threshold, 1);
 end
-abs_start = min(signal_start) - 20;
+abs_start = min(signal_start) - 2;
 if (abs_start < 1); abs_start = 1; end
 
 signal_start = signal_start - abs_start;
