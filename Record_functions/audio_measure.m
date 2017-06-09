@@ -52,28 +52,16 @@ for ii = 1:length(code)
 end
 
 % Length of data segment
-Trec = Nrp/Timer3 + 0.1;              % Record data segment length
-Tbeacon = (Nrp - 0.2)/Timer3;              % Time the beacon should stay on
+Trec = Nrp/Timer3 + 0.1;                % Record data segment length
+Tbeacon = (Nrp - 0.2)/Timer3;           % Time the beacon should stay on
 sampleCount = floor(Trec*Fs);           % The number of samples of the recorded data (one data segment)
 
 
 %% Initialise audio device
-if playrec('isInitialised')
-    playrec('reset');
-end
-
-devs = playrec('getDevices');
-for id = 1:size(devs,2)
-    if(strcmp('AudioBox ASIO Driver', devs(id).name))
-        break;
-    end
-end
-devId = devs(id).deviceID;
-
-playrec('init', Fs, -1, devId);
+initialise_audio_box(Fs, true);
 
 if ~playrec('isInitialised')
-    error ('Failed to initialise device at any sample rate');
+    error ('Audio device must be initialised');
 end
 
 RXXr = zeros(nLoop, sampleCount, nMicrop);
@@ -107,7 +95,7 @@ for nRun = 1:nLoop
     
     % start recording in a new buffer page
     pause(0.1);
-    page = playrec('rec', sampleCount, 1 : nMicrop);
+    page = start_record(Fs, sampleCount);
     
     tic;
     KITT.toggleBeacon(true);
@@ -126,9 +114,7 @@ for nRun = 1:nLoop
        KITT.toggleBeacon(false); 
     end
     
-    y = double(playrec('getRec', page)); % get the data
-
-    playrec('delPage');
+    y = get_record(page);
     
 
     % Save the raw data in the data matrix, RXXr is a 3D matrix, RXXr(N_Loop, data_segment, nMicrop)
