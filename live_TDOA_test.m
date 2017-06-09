@@ -209,7 +209,7 @@ for i = 1:nchan
 end
 
 Hdist = Hmax-Hmax(1);
-[x_calc y_calc z_calc] = tdoa2(mic, Hdist); %#ok<NCOMMA>
+[x_calc y_calc z_calc] = tdoa2(transpose(struct2cell(field_data.mics)),mic, Hdist,Fs); %#ok<NCOMMA>
 
 distance = zeros(1,5);
 mics = 1:5;
