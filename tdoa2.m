@@ -3,7 +3,7 @@ timedelayvec = Hmax/Fs;
 % sensor index shift of 1 occurrs here
 Sen_position = zeros(5,3);
 for i=1:length(mic_order)
-    Sen_position(i,:) = mic_position(mic_order(i),:);
+    Sen_position(i,:) = mic_position{mic_order(i)};
 end
 
 s = size(Sen_position);
