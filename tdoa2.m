@@ -1,9 +1,12 @@
 function [x y z] = tdoa2(mic_position, mic_order , Hmax, Fs)
+
+Vs = 34029;
+
 timedelayvec = Hmax/Fs;
 % sensor index shift of 1 occurrs here
 Sen_position = zeros(5,3);
 for i=1:length(mic_order)
-    Sen_position(i,:) = mic_position{mic_order(i)};
+    Sen_position(i,:) = [mic_position{mic_order(i), :}];
 end
 
 s = size(Sen_position);
@@ -13,22 +16,24 @@ Amat = zeros(len,1);
 Bmat = zeros(len,1);
 Cmat = zeros(len,1);
 Dmat = zeros(len,1);
+
+x1 = Sen_position(1,1);
+y1 = Sen_position(1,2);
+z1 = Sen_position(1,3);
+x2 = Sen_position(2,1);
+y2 = Sen_position(2,2);
+z2 = Sen_position(2,3);
+
 for i=3:len
-    x1 = Sen_position(1,1);
-    y1 = Sen_position(1,2);
-    z1 = Sen_position(1,3);
-    x2 = Sen_position(2,1);
-    y2 = Sen_position(2,2);
-    z2 = Sen_position(2,3);
     xi = Sen_position(i,1);
     yi = Sen_position(i,2);
     zi = Sen_position(i,3); 
-   Amat(i) = (1/(340.29*timedelayvec(i)))*(-2*x1+2*xi) - (1/(340.29*timedelayvec(2)))*(-2*x1+2*x2);
-   Bmat(i) = (1/(340.29*timedelayvec(i)))*(-2*y1+2*yi) - (1/(340.29*timedelayvec(2)))*(-2*y1+2*y2);
-   Cmat(i) = (1/(340.29*timedelayvec(i)))*(-2*z1+2*zi) - (1/(340.29*timedelayvec(2)))*(-2*z1+2*z2);
+   Amat(i) = (1/(Vs*timedelayvec(i)))*(-2*x1+2*xi) - (1/(Vs*timedelayvec(2)))*(-2*x1+2*x2);
+   Bmat(i) = (1/(Vs*timedelayvec(i)))*(-2*y1+2*yi) - (1/(Vs*timedelayvec(2)))*(-2*y1+2*y2);
+   Cmat(i) = (1/(Vs*timedelayvec(i)))*(-2*z1+2*zi) - (1/(Vs*timedelayvec(2)))*(-2*z1+2*z2);
    Sum1 = (x1^2)+(y1^2)+(z1^2)-(xi^2)-(yi^2)-(zi^2);
    Sum2 = (x1^2)+(y1^2)+(z1^2)-(x2^2)-(y2^2)-(z2^2);
-   Dmat(i) = 340.29*(timedelayvec(i) - timedelayvec(2)) + (1/(340.29*timedelayvec(i)))*Sum1 - (1/(340.29*timedelayvec(2)))*Sum2;
+   Dmat(i) = Vs*(timedelayvec(i) - timedelayvec(2)) + (1/(Vs*timedelayvec(i)))*Sum1 - (1/(Vs*timedelayvec(2)))*Sum2;
 end
 
 
