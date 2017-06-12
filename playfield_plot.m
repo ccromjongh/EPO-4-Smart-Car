@@ -1,4 +1,4 @@
-function playfield_plot (distance, order, x_calc, y_calc)
+function playfield_plot (distance, order, x_calc, y_calc, field_data)
 distance_between = 20;
 circles = 0;
 base_expansion = 120;
@@ -7,10 +7,13 @@ if (nargin < 2)
    order = 1:5; 
 end
 
-JSON = fileread('field_K.json');
+% If no field data is given, use the file of the Tellegen Hall
+if (nargin < 5)
+    JSON = fileread('field.json');
 
-field_data = jsondecode(JSON);
-clear JSON;
+    field_data = jsondecode(JSON);
+    clear JSON;
+end
 
 figure(4);
 hold off;

@@ -213,4 +213,4 @@ Hdist = Hmax-Hmax(1);
 
 distance = zeros(1,5);
 mics = 1:5;
-playfield_plot(distance, mic, x_calc, y_calc);
+playfield_plot(distance, mic, x_calc, y_calc, field_data);
