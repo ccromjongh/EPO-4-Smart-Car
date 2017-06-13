@@ -40,7 +40,7 @@ public:
 };
 
 const double start_x = 0.35, start_y = -0.12, start_angle = M_PI_2;
-const double end_x = 2.75, end_y = 1.68, end_angle = -M_PI_4;
+const double end_x = 2.39, end_y = 1.68, end_angle = -M_PI_4;
 unsigned long nodesChosen = 0, nodesLookedAt = 0, maxStepsTillNow = 0;
 
 Node *start_node, *end_node;
@@ -122,6 +122,8 @@ Node::Node(Node *parent, double x_coord, double y_coord, unsigned int path_cost)
         set_abs_angle(atan2(dy, dx));
         set_rel_angle();
     } else {
+        rel_ang_360 = 0;
+        diff_ang_360 = 0;
         this->parent = nullptr;
     }
 
@@ -147,10 +149,11 @@ Node *Node::createChild(unsigned int relative_angle) {
 }
 
 void Node::set_abs_angle(double angle) {
+    // Normalize angle
     abs_angle = addAngles(angle, 0.0);
 
-    // Subtract a half pi to get the zero point to the north
-    double conv_angle = abs_angle - M_PI_2;
+    // Invert and add a half pi to the angle to get the zero point to the north
+    double conv_angle = -abs_angle + M_PI_2;
     // If we are below zero, add two pi to get it positive
     if (conv_angle < 0) {
         conv_angle += TWO_PI;
@@ -160,14 +163,14 @@ void Node::set_abs_angle(double angle) {
 
 void Node::set_rel_angle() {
     // The change in direction relative to the parent Node
-    rel_angle = addAngles(abs_angle, -parent->abs_angle);
+    rel_angle = addAngles(parent->abs_angle, -abs_angle);
+
+    if (abs(rel_angle) < 0.0000000001) {
+        rel_angle = 0.0;
+    }
 
     // The change in relative angle. This is how much steering action is needed
-    diff_angle = addAngles(rel_angle, -parent->rel_angle);
-	
-	if (rel_angle < 0.0000000001) {
-		rel_angle = 0.0;
-	}
+    diff_angle = addAngles(-parent->rel_angle, rel_angle);
 
     rel_ang_360 = (int) ((rel_angle / TWO_PI) * 360);
     diff_ang_360 = (int) ((diff_angle / TWO_PI) * 360);
@@ -374,14 +377,16 @@ void printRoute(PathNode *destination) {
 	Node *ptr = destination->mapNode;
 	
 	do {
-        printf("Step = %d\tx = %.2f cm\ty = %.2f cm\trel angle = %d deg\tdiff angle = %d deg\n", ptr->steps, ptr->x, ptr->y, ptr->rel_ang_360, ptr->diff_ang_360);
+        printf("Step = %d\tx = %.2f m\ty = %.2f m\trel angle = %d deg\tdiff angle = %d deg\tabs angle = %d deg\n",
+               ptr->steps, ptr->x, ptr->y, ptr->rel_ang_360, ptr->diff_ang_360, ptr->abs_ang_360);
 		//cout << "Advance with a relative angle of " << ptr->rel_ang_360 << " deg" << endl;
 	} while ((ptr = ptr->parent) != nullptr);
 
 
     // Do it again with MATLAB ish notation
     ptr = destination->mapNode;
-    printf("\n");
+    printf("\nError at destination: %.3f cm\n", (ptr->end_radius * 100));
+
     char x_buffer[500], y_buffer[500], *x_end = x_buffer, *y_end = y_buffer;
     bool first = true;
 
@@ -397,11 +402,11 @@ void printRoute(PathNode *destination) {
         y_end += sprintf(y_end, "%.3f", ptr->y);
     } while ((ptr = ptr->parent) != nullptr);
 
-    printf("x = [%s];\ny = [%s];\nplot(x, y);\naxis([-2.5 2.5 -2.5 2.5]);\n\n", x_buffer, y_buffer);
+    printf("\nMATLAB code:\n\nx = [%s];\ny = [%s];\nplot(x, y);\naxis([-2.5 2.5 -2.5 2.5]);\npbaspect([1 1 1]);\n\n", x_buffer, y_buffer);
 }
 
 int main() {
-    angles = linSpace(-M_PI, M_PI, M_PI/5);
+    angles = linSpace(-M_PI_4, M_PI_4, M_PI_4/5);
     start_node = new Node(NULL, start_x, start_y, 0);
     end_node = new Node(NULL, end_x, end_y, 0);
 
