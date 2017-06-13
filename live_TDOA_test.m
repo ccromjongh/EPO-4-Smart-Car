@@ -4,7 +4,7 @@ clear variables;
 nchan = 5;
 max_distance = 500;
 min_distance = 50;
-checkpoint = 1;
+checkpoint = 2;
 Vs = 340.29;
 do_absolute = true;
 demo_mode = true;
@@ -15,6 +15,7 @@ field_data = jsondecode(JSON);
 clear JSON;
 
 load audiodata_96k.mat;
+Nrp = Nrp - 1;
 
 
 Trec = Nrp/Timer3 + 0.1;                % Record data segment length
@@ -65,6 +66,8 @@ end
 % Get expected values of the distances
 radii = sqrt((field_data.marks(checkpoint).x - [field_data.mics.x]).^2 + (field_data.marks(checkpoint).y - [field_data.mics.y]).^2);
 expected = radii/(100*Vs);
+x_ref = field_data.marks(checkpoint).x;
+y_ref = field_data.marks(checkpoint).y;
 
 
 %% Plot recorded data
@@ -199,18 +202,27 @@ for i = 1:nchan
     
     hold on;
     
-    [pk,lc] = findpeaks(h(:,i), 'Minpeakheight', 0.5);
-    p = plot(lc(1)/Fs, pk(1), 'x');
+    [~, lc] = findpeaks(h(:,i), 'Minpeakheight', 0.5);
+    firstPeak = lc(1);
+    [pk, lc] = max(h(firstPeak:firstPeak + 50, i));
+    lc = lc + firstPeak - 1;
+    
+    p = plot((lc-1)/Fs, pk, 'x');
     p.LineWidth = 1.5;
     p.MarkerSize = 8;
     
     hold off;
     Hmax(:,i) = lc(1);
 end
+clear firstPeak;
 
 Hdist = Hmax-Hmax(1);
 [x_calc y_calc z_calc] = tdoa2(transpose(struct2cell(field_data.mics)),mic, Hdist,Fs); %#ok<NCOMMA>
 
+error_distance = sqrt((x_ref - x_calc)^2 + (y_ref - y_calc)^2);
+
 distance = zeros(1,5);
 mics = 1:5;
-playfield_plot(distance, mic, x_calc, y_calc);
+playfield_plot(distance, mic, x_calc, y_calc, field_data);
+
+fprintf('Calculated a position of x = %.2f; y = %.2f, resulting in an error of %.2f cm\n', x_calc, y_calc, error_distance);
