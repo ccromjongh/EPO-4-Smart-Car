@@ -8,6 +8,9 @@ using namespace std;
 #define RADIUS 0.10
 #define TWO_PI (2*M_PI)
 #define END_TOLLERANCE 0.1
+#define END_ANGLE_TOLLERANCE (M_PI_4/2)    // 45/2 = 22.5 deg
+#define ENFORCE_ANGLE false
+#define ANGLE_DIVISIONS 10
 
 #define RADIUS_MULTIPLIER 100
 
@@ -40,7 +43,7 @@ public:
 };
 
 const double start_x = 0.35, start_y = -0.12, start_angle = M_PI_2;
-const double end_x = 2.39, end_y = 1.68, end_angle = -M_PI_4;
+const double end_x = 2.39, end_y = 1.68, end_angle = M_PI_2;
 unsigned long nodesChosen = 0, nodesLookedAt = 0, maxStepsTillNow = 0;
 
 Node *start_node, *end_node;
@@ -271,6 +274,14 @@ void placeSorted (PathNode **firstNode, PathNode *insert) {
     ptr->after(insert);
 }
 
+double end_angle_difference(Node *compare) {
+    double first = abs(addAngles(compare->get_abs_angle(), -end_node->get_abs_angle()));
+    double second = abs(addAngles(compare->get_abs_angle() + M_PI, -end_node->get_abs_angle()));
+    double least = min(first, second);
+    return least;
+}
+
+
 
 unsigned int costFunction (Node *current) {
     unsigned int estm_cost = 0;
@@ -278,7 +289,10 @@ unsigned int costFunction (Node *current) {
 
     // Add estimation cost for distance to the target
     double radius = calcRadius(current,  end_node);
-    estm_cost += (radius * RADIUS_MULTIPLIER);
+    double virt_x = current->x + 0.3 * radius * cos(current->get_abs_angle());
+    double virt_y = current->y + 0.3 * radius * sin(current->get_abs_angle());
+    double virt_distance = calcRadius(end_node->x - virt_x, end_node->y - virt_y) + 0.3 * radius;
+    estm_cost += (virt_distance * RADIUS_MULTIPLIER);
 
     // If we have a parent, add the cost of the steps already taken to the path length cost
     if (current->parent)
@@ -287,10 +301,21 @@ unsigned int costFunction (Node *current) {
     }
 
     // Add some cost for the relative angle, because we don't want unnecessary steering
-    path_cost += abs(current->get_rel_angle()) * 10;
+    path_cost += abs(current->get_rel_angle()) * 20;
 
     // Add some cost for the differential angle, because we want to change the steering direction as little as possible
-    path_cost += abs(current->get_diff_angle()) * 20;
+    path_cost += pow(abs(current->get_diff_angle()), 2) * 40;
+
+#if (ENFORCE_ANGLE)
+    //if (radius < 1.0) {
+        double test = log10(radius);
+        double test2 = log10(0.027);
+        //double angle_cost = -50 * end_angle_difference(current) * log10(radius);
+        //angle_cost = 30 * end_angle_difference(current) * (1.0-radius);
+        double angle_cost = 10 * end_angle_difference(current) / pow(radius, 0.25);
+        estm_cost += angle_cost;
+    //}
+#endif
 
     // Estimation cost should include history of the path
     estm_cost += path_cost;
@@ -314,7 +339,7 @@ void seekPath() {
     // Keep finding nodes, until we got sufficiently close to the end-node
     while (true)
     {
-        for (int j = 0; j < 11; ++j) {
+        for (int j = 0; j < (2*ANGLE_DIVISIONS + 1); ++j) {
             double angle = angles[j] + working->mapNode->get_abs_angle();
             double _x = working->mapNode->x + RADIUS * cos(angle);
             double _y = working->mapNode->y + RADIUS * sin(angle);
@@ -328,10 +353,18 @@ void seekPath() {
             }*/
 	
 			placeSorted(&openList, pathNodeOption);
-	
-			if (openList && calcRadius(openList->mapNode, end_node) <= END_TOLLERANCE) {
+        }
+
+        double distance_to_target = calcRadius(openList->mapNode, end_node);
+        if (openList && distance_to_target <= END_TOLLERANCE) {
+            #if (ENFORCE_ANGLE)
+                double tollerance_compare = end_angle_difference(openList->mapNode);
+                if (tollerance_compare < END_ANGLE_TOLLERANCE) {
+                    goto reachedEnd;
+                }
+            #else
                 goto reachedEnd;
-            }
+            #endif
         }
 
         if (openList == NULL)
@@ -364,7 +397,7 @@ void seekPath() {
 
     reachedEnd: cout << "Found a path, yay!" << endl;
 	
-	printRoute(pathNodeOption);
+	printRoute(openList);
 
     // Cleanup of all objects
     //deleteList(working);
@@ -402,16 +435,20 @@ void printRoute(PathNode *destination) {
         y_end += sprintf(y_end, "%.3f", ptr->y);
     } while ((ptr = ptr->parent) != nullptr);
 
-    printf("\nMATLAB code:\n\nx = [%s];\ny = [%s];\nplot(x, y);\naxis([-2.5 2.5 -2.5 2.5]);\npbaspect([1 1 1]);\n\n", x_buffer, y_buffer);
+    printf("\nMATLAB code:\n\nx = [%s];\ny = [%s];"
+                   "\nplot(x, y);\naxis([-2.5 2.5 -2.5 2.5]); pbaspect([1 1 1]);"
+                   "\ntitle('KITT navigation using vertex pathfinding');"
+                   "\nxlabel('X axis (m)'); ylabel('Y axis (m)');\n\n", x_buffer, y_buffer);
 }
 
 int main() {
-    angles = linSpace(-M_PI_4, M_PI_4, M_PI_4/5);
+    angles = linSpace(-M_PI_4, M_PI_4, M_PI_4/ANGLE_DIVISIONS);
     start_node = new Node(NULL, start_x, start_y, 0);
     end_node = new Node(NULL, end_x, end_y, 0);
 
     start_node->set_abs_angle(start_angle);
     start_node->estm_cost = costFunction(start_node);
+    end_node->set_abs_angle(end_angle);
 
 
     seekPath();
