@@ -6,6 +6,15 @@
 #include <mex.h>
 
 using namespace std;
+
+#define MATLAB_IS_AN_IDIOT true
+
+#if (MATLAB_IS_AN_IDIOT)
+    #define M_PI 3.141592653589793238462643383279502884197169399375105820974944592307816406286
+    #define M_PI_2 (M_PI/2)
+    #define M_PI_4 (M_PI/4)
+#endif
+
 #define RADIUS 0.10
 #define TWO_PI (2*M_PI)
 #define END_TOLLERANCE 0.1
@@ -329,7 +338,7 @@ unsigned int costFunction (Node *current) {
     return estm_cost;
 }
 
-void seekPath() {
+PathNode *seekPath() {
     PathNode *startPathNode, *openList, *working, *pathNodeOption;
     startPathNode = new PathNode(start_node);
     Node *nodeOption;
@@ -371,7 +380,7 @@ void seekPath() {
         if (openList == NULL)
         {
             cout << "No path could be found!" << endl;
-            return;
+            return NULL;
         }
 
         nodesChosen++;
@@ -397,14 +406,12 @@ void seekPath() {
     }
 
     reachedEnd: cout << "Found a path, yay!" << endl;
-	
-	printRoute(openList);
 
     // Cleanup of all objects
     //deleteList(working);
     //deleteList(openList); //Not needed because of working = openList;
     //resetMap(false, false);
-    //return cost;
+    return openList;
 }
 
 void printRoute(PathNode *destination) {
@@ -442,6 +449,22 @@ void printRoute(PathNode *destination) {
                    "\nxlabel('X axis (m)'); ylabel('Y axis (m)');\n\n", x_buffer, y_buffer);
 }
 
+PathNode *backtrace (PathNode *destination)
+{
+    Node *ptr = destination->mapNode;
+    PathNode *list = new PathNode(ptr);
+
+    // Trace to parent, and add it before the current item in the list
+    while ((ptr = ptr->parent) != NULL)
+    {
+        list->prev = new PathNode(ptr);
+        list->prev->next = list;
+        list = list->prev;
+    }
+
+    return list;
+}
+
 int main() {
     // Set up angle array for the pathfinder to chose from
     angles = linSpace(-M_PI_4, M_PI_4, M_PI_4/ANGLE_DIVISIONS);
@@ -456,7 +479,8 @@ int main() {
     end_node->set_abs_angle(end_angle);
 
 
-    seekPath();
+    PathNode *route = seekPath();
+    printRoute(route);
 
     std::cout << "End of program :'(" << std::endl;
     return 0;
@@ -506,11 +530,11 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
     }
 
     // Setting the start and endpoint data from the input
-    start_x = mxGetScalar(prhs[0]));
-    start_y = mxGetScalar(prhs[1]));
-    start_angle = mxGetScalar(prhs[2]));
-    end_x = mxGetScalar(prhs[3]));
-    end_y = mxGetScalar(prhs[4]));
+    start_x = mxGetScalar(prhs[0]);
+    start_y = mxGetScalar(prhs[1]);
+    start_angle = mxGetScalar(prhs[2]);
+    end_x = mxGetScalar(prhs[3]);
+    end_y = mxGetScalar(prhs[4]);
 
 //    M = mxGetM(A IN); /* Get the dimensions of A */
 //    N = mxGetN(A IN);
@@ -538,7 +562,8 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
     start_node->estm_cost = costFunction(start_node);
     end_node->set_abs_angle(end_angle);
 
-    seekPath();
+    PathNode *route = seekPath();
+    printRoute(route);
 
     cout << "End of program :'(" << endl;
 }
