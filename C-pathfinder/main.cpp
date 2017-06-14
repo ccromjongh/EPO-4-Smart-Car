@@ -358,6 +358,8 @@ PathNode *seekPath() {
             pathNodeOption = new PathNode(nodeOption);
 			nodesLookedAt++;
 
+            if (nodesLookedAt > 75000) { goto NoPath; }
+
             /*if (calcRadius(nodeOption, end_node) <= END_TOLLERANCE) {
                 goto reachedEnd;
             }*/
@@ -379,7 +381,7 @@ PathNode *seekPath() {
 
         if (openList == NULL)
         {
-            cout << "No path could be found!" << endl;
+            NoPath: cout << "No path could be found!" << endl;
             return NULL;
         }
 
@@ -501,7 +503,7 @@ int main() {
  **/
 
 #define IS_REAL_DOUBLE(P) (!mxIsComplex(P) && !mxIsSparse(P) && mxIsDouble(P))
-#define IS_SINGLE_NUMBER(P) (IS_REAL_DOUBLE(P) && mxGetNumberOfDimensions(P) == 1)
+#define IS_SINGLE_NUMBER(P) (IS_REAL_DOUBLE(P) && mxGetNumberOfElements(P) == 1)
 #define IS_REAL_2D_FULL_DOUBLE(P) (!mxIsComplex(P) && \
         mxGetNumberOfDimensions(P) == 2 && !mxIsSparse(P) && mxIsDouble(P))
 #define IS_REAL_SCALAR(P) (IS_REAL_2D_FULL_DOUBLE(P) && mxGetNumberOfElements(P) == 1)
