@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <mex.h>
 
 using namespace std;
 #define RADIUS 0.10
@@ -42,8 +43,8 @@ public:
     void before(PathNode *insert), after(PathNode *insert);
 };
 
-const double start_x = 0.35, start_y = -0.12, start_angle = M_PI_2;
-const double end_x = 2.39, end_y = 1.68, end_angle = M_PI_2;
+double start_x = 0.35, start_y = -0.12, start_angle = M_PI;
+double end_x = 2.39, end_y = 1.68, end_angle = M_PI_2;
 unsigned long nodesChosen = 0, nodesLookedAt = 0, maxStepsTillNow = 0;
 
 Node *start_node, *end_node;
@@ -442,10 +443,14 @@ void printRoute(PathNode *destination) {
 }
 
 int main() {
+    // Set up angle array for the pathfinder to chose from
     angles = linSpace(-M_PI_4, M_PI_4, M_PI_4/ANGLE_DIVISIONS);
+
+    // Create start and end node
     start_node = new Node(NULL, start_x, start_y, 0);
     end_node = new Node(NULL, end_x, end_y, 0);
 
+    // Set correct orientation of start and end node
     start_node->set_abs_angle(start_angle);
     start_node->estm_cost = costFunction(start_node);
     end_node->set_abs_angle(end_angle);
@@ -457,3 +462,83 @@ int main() {
     return 0;
 }
 
+
+/** This is the function that MATLAB will use when calling the .mex file
+ *
+ *  C/MEX   Meaning                                             MATLAB equivalent
+ *
+ *  nlhs    Number of output variables                          nargout
+ *  plhs    Array of mxArray pointers to the output variables   varargout
+ *  nrhs    Number of input variables                           nargin
+ *  prhs    Array of mxArray pointers to the input variables    varargin
+ *
+ *  MATLAB syntax: [x_arr, y_arr] = main(start_x, start_y, start_angle, end_x, end_y)
+ *
+ **/
+
+#define IS_REAL_DOUBLE(P) (!mxIsComplex(P) && !mxIsSparse(P) && mxIsDouble(P))
+#define IS_SINGLE_NUMBER(P) (IS_REAL_DOUBLE(P) && mxGetNumberOfDimensions(P) == 1)
+#define IS_REAL_2D_FULL_DOUBLE(P) (!mxIsComplex(P) && \
+        mxGetNumberOfDimensions(P) == 2 && !mxIsSparse(P) && mxIsDouble(P))
+#define IS_REAL_SCALAR(P) (IS_REAL_2D_FULL_DOUBLE(P) && mxGetNumberOfElements(P) == 1)
+
+void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
+
+    /* Macros for the ouput and input arguments */
+    #define B_OUT plhs[0]
+
+    #define A_IN prhs[0]
+    #define P_IN prhs[1]
+
+
+    // Check the number of in- and output arguments
+    if (nrhs < 5) {
+        mexErrMsgTxt("You are missing some input arguments.");
+    } else if (nrhs > 5) {
+        mexErrMsgTxt("You have too many input arguments.");
+    } else if (nlhs > 2) {
+        mexErrMsgTxt("Too many output arguments.");
+    }
+
+    // Check if data is in the right format
+    if (!IS_SINGLE_NUMBER(prhs[0]) || !IS_SINGLE_NUMBER(prhs[1]) || !IS_SINGLE_NUMBER(prhs[2]) || !IS_SINGLE_NUMBER(prhs[3]) || !IS_SINGLE_NUMBER(prhs[4])) {
+        mexErrMsgTxt("All the coordinates and angles should be single real scalars.");
+    }
+
+    // Setting the start and endpoint data from the input
+    start_x = mxGetScalar(prhs[0]));
+    start_y = mxGetScalar(prhs[1]));
+    start_angle = mxGetScalar(prhs[2]));
+    end_x = mxGetScalar(prhs[3]));
+    end_y = mxGetScalar(prhs[4]));
+
+//    M = mxGetM(A IN); /* Get the dimensions of A */
+//    N = mxGetN(A IN);
+//    A = mxGetPr(A IN); /* Get the pointer to the data of A */
+//    B_OUT = mxCreateDoubleMatrix(M, N, mxREAL); /* Create the output matrix */
+//    B = mxGetPr(B OUT); /* Get the pointer to the data of B */
+//    for(n = 0; n < N; n++) /* Compute a matrix with normalized columns */
+//    {
+//        for (m = 0, colnorm = 0.0; m < M; m++) { colnorm += pow(A[m + M * n], p); }
+//        colnorm = pow(fabs(colnorm), 1.0 / p); /* Compute the norm of the nth column */
+//
+//        for (m = 0; m < M; m++) { B[m + M * n] = A[m + M * n] / colnorm; }
+//    }
+
+
+    // Set up angle array for the pathfinder to chose from
+    angles = linSpace(-M_PI_4, M_PI_4, M_PI_4/ANGLE_DIVISIONS);
+
+    // Create start and end node
+    start_node = new Node(NULL, start_x, start_y, 0);
+    end_node = new Node(NULL, end_x, end_y, 0);
+
+    // Set correct orientation of start and end node
+    start_node->set_abs_angle(start_angle);
+    start_node->estm_cost = costFunction(start_node);
+    end_node->set_abs_angle(end_angle);
+
+    seekPath();
+
+    cout << "End of program :'(" << endl;
+}
