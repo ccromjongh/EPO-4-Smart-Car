@@ -1,0 +1,11 @@
+See this answer to use the mingw compiler with MATLAB
+https://stackoverflow.com/a/28490382/7692604
+
+To install mingw, go to https://mingw-w64.org/doku.php/download and choose "Mingw-builds".
+I would just grab the newest version and use posix threads and seh.
+
+The PATH variable should point to *mingw_root*/bin                 e.g. "C:\Program Files\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw64\bin"
+The MINGWROOT environment variable should point to *mingw_root*    e.g. "C:\Program Files\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw64"
+
+
+To build the executable, use    "mex C-pathfinder\main.cpp"
