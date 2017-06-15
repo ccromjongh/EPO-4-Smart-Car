@@ -220,6 +220,7 @@ Hdist = Hmax-Hmax(1);
 [x_calc y_calc z_calc] = tdoa2(transpose(struct2cell(field_data.mics)),mic, Hdist,Fs); %#ok<NCOMMA>
 
 error_distance = sqrt((x_ref - x_calc)^2 + (y_ref - y_calc)^2);
+Performace = toc;
 
 distance = zeros(1,5);
 mics = 1:5;
