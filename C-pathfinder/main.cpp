@@ -342,6 +342,7 @@ PathNode *seekPath() {
     PathNode *startPathNode, *openList, *working, *pathNodeOption;
     startPathNode = new PathNode(start_node);
     Node *nodeOption;
+	double distance_to_target;
 
     openList = NULL;
     working = startPathNode;
@@ -359,7 +360,6 @@ PathNode *seekPath() {
 			nodesLookedAt++;
 
             if (nodesLookedAt > 75000) { goto NoPath; }
-
             /*if (calcRadius(nodeOption, end_node) <= END_TOLLERANCE) {
                 goto reachedEnd;
             }*/
@@ -367,7 +367,7 @@ PathNode *seekPath() {
 			placeSorted(&openList, pathNodeOption);
         }
 
-        double distance_to_target = calcRadius(openList->mapNode, end_node);
+        distance_to_target = calcRadius(openList->mapNode, end_node);
         if (openList && distance_to_target <= END_TOLLERANCE) {
             #if (ENFORCE_ANGLE)
                 double tollerance_compare = end_angle_difference(openList->mapNode);
@@ -451,8 +451,9 @@ void printRoute(PathNode *destination) {
                    "\nxlabel('X axis (m)'); ylabel('Y axis (m)');\n\n", x_buffer, y_buffer);
 }
 
-PathNode *backtrace (PathNode *destination)
+PathNode *backtrace (PathNode *destination, size_t *pathLength = nullptr)
 {
+	size_t nNodes = 1;
     Node *ptr = destination->mapNode;
     PathNode *list = new PathNode(ptr);
 
@@ -462,7 +463,12 @@ PathNode *backtrace (PathNode *destination)
         list->prev = new PathNode(ptr);
         list->prev->next = list;
         list = list->prev;
+		nNodes++;
     }
+	
+	if (pathLength) {
+		*pathLength = nNodes;
+	}
 
     return list;
 }
@@ -522,7 +528,7 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
         mexErrMsgTxt("You are missing some input arguments.");
     } else if (nrhs > 5) {
         mexErrMsgTxt("You have too many input arguments.");
-    } else if (nlhs > 2) {
+    } else if (nlhs > 3) {
         mexErrMsgTxt("Too many output arguments.");
     }
 
@@ -565,7 +571,27 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
     end_node->set_abs_angle(end_angle);
 
     PathNode *route = seekPath();
-    printRoute(route);
+    // printRoute(route);
+	
+	size_t nNodes;
+	PathNode *path_list = backtrace(route, &nNodes);
+	
+	phls[0] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
+	phls[1] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
+	phls[2] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
+	
+	double *x_mat = mxGetPr(phls[0]);
+	double *y_mat = mxGetPr(phls[1]);
+	double *ang_mat = mxGetPr(phls[2]);
+	
+	PathNode *ptr = path_list;
+	
+	for (int i = 0; i < nNodes; ++i) {
+		x_mat[i] = ptr->mapNode->x;
+		y_mat[i] = ptr->mapNode->y;
+		ang_mat[i] = ptr->mapNode->get_rel_angle();
+		ptr = ptr->next;
+	}
 
     cout << "End of program :'(" << endl;
 }

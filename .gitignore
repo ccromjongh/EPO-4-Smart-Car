@@ -1,3 +1,4 @@
 *.asv
 C-pathfinder/cmake-build-debug/
 C-pathfinder/.idea/
+C-pathfinder/CMakeLists.txt
