@@ -1,4 +1,5 @@
 %KITT.closePort();
+%pause(0.5);
 KITT.openPort('COM3');
 
 pause(0.5);

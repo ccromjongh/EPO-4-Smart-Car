@@ -191,6 +191,8 @@ clear temp holder i j;
 figure(3);
 for i = 1:nchan
     h(:,i) = abs(ch2(x,y(:,i)));
+    h(1:end-2000,i) = h(2001:end, i);
+    %h(1:2000, i) = 0;
     h(:,i) = h(:,i)/max(h(:,i));
     th = (0:(length(h) - 1))/Fs;
     

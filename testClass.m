@@ -14,12 +14,12 @@ classdef testClass<handle
         % Function to open serial port to communicate with KITT
         % Param: `comport`, string
         function obj = openPort (obj, comport)
-            try
-                EPOCommunications('close');                 % If port was open, close it first
-                pause(0.5);
-            catch
-
-            end
+%             try
+%                 EPOCommunications('close');                 % If port was open, close it first
+%                 pause(0.5);
+%             catch
+% 
+%             end
             pause(0.1);
             obj.portIsOpen = false;
             result = EPOCommunications('open', comport);    % Open connection
