@@ -14,21 +14,20 @@ classdef testClass<handle
         % Function to open serial port to communicate with KITT
         % Param: `comport`, string
         function obj = openPort (obj, comport)
-            if (~strcmp(obj.currentPortName, comport))          % Only act if string is different
-                try
-                    EPOCommunications('close');                     % If port was open, close it first
-                catch
-                    
-                end
-                pause(0.1);
-                obj.portIsOpen = false;
-                result = EPOCommunications('open', comport);    % Open connection
-                if (result == 0)
-                    error('Port in use or not available');      % Throw error
-                end
-                obj.portIsOpen = true;
-                obj.currentPortName = comport;
+            try
+                EPOCommunications('close');                 % If port was open, close it first
+                pause(0.5);
+            catch
+
             end
+            pause(0.1);
+            obj.portIsOpen = false;
+            result = EPOCommunications('open', comport);    % Open connection
+            if (result == 0)
+                error('Port in use or not available');      % Throw error
+            end
+            obj.portIsOpen = true;
+            obj.currentPortName = comport;
         end
         
         % Function to close serial port when the job is done
@@ -45,10 +44,14 @@ classdef testClass<handle
         % `Timer3`  ^ , repeat frequency of the ref_signal
         function obj = setupBeacon(obj, Timer0, Timer1, Timer3, SecretCode)
             EPOCommunications('transmit', ['F' num2str(Timer0)]);	% Timer0, carrier frequency
+            java.lang.Thread.sleep(20);
             EPOCommunications('transmit', ['B' num2str(Timer1)]);	% Timer1, bit frequency
+            java.lang.Thread.sleep(20);
             R_count = Timer1/Timer3;
             EPOCommunications('transmit', ['R' num2str(R_count)]);	% Set the repetition count
+            java.lang.Thread.sleep(20);
             EPOCommunications('transmit', ['C0x' SecretCode]);      % Set the audio code
+            java.lang.Thread.sleep(20);
         end
         
         function obj = toggleBeacon(obj, toggle)
