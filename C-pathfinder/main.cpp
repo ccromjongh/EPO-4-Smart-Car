@@ -3,13 +3,13 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include <mex.h>
 
 using namespace std;
 
 #define MATLAB_IS_AN_IDIOT true
 
 #if (MATLAB_IS_AN_IDIOT)
+    #include <mex.h>
     #define M_PI 3.141592653589793238462643383279502884197169399375105820974944592307816406286
     #define M_PI_2 (M_PI/2)
     #define M_PI_4 (M_PI/4)
@@ -20,7 +20,9 @@ using namespace std;
 #define END_TOLLERANCE 0.1
 #define END_ANGLE_TOLLERANCE (M_PI_4/2)    // 45/2 = 22.5 deg
 #define ENFORCE_ANGLE false
-#define ANGLE_DIVISIONS 10
+//#define ANGLE_LIMIT (M_PI_4/6)             // 45/6 = 7.5 deg
+#define ANGLE_LIMIT 0.1210640396             // minimum diameter of 1.65 meter
+#define ANGLE_DIVISIONS 6
 
 #define RADIUS_MULTIPLIER 100
 
@@ -231,12 +233,14 @@ void PathNode::after(PathNode *insert) {
 }
 
 
-vector<double> linSpace(double lower, double upper, double stepsize = 1) {
-    unsigned int length = (unsigned int) (abs(upper - lower)/stepsize) + 1;
-    vector<double> arr (length);
+vector<double> linSpace(double lower, double upper, int divisions = 1) {
+    int abs_div_num = divisions * 2;
+    double range = abs(upper - lower);
+    double stepsize = range / abs_div_num;
+    vector<double> arr (abs_div_num + 1);
 
-    for (int i = 0; i < length; ++i) {
-        arr[i] = lower + i * stepsize;
+    for (int i = 0; i <= abs_div_num; ++i) {
+        arr[i] = lower + (i * stepsize);
     }
 
     return arr;
@@ -475,7 +479,7 @@ PathNode *backtrace (PathNode *destination, size_t *pathLength = nullptr)
 
 int main() {
     // Set up angle array for the pathfinder to chose from
-    angles = linSpace(-M_PI_4, M_PI_4, M_PI_4/ANGLE_DIVISIONS);
+    angles = linSpace(-ANGLE_LIMIT, ANGLE_LIMIT, ANGLE_DIVISIONS);
 
     // Create start and end node
     start_node = new Node(NULL, start_x, start_y, 0);
@@ -494,6 +498,7 @@ int main() {
     return 0;
 }
 
+#if (MATLAB_IS_AN_IDIOT)
 
 /** This is the function that MATLAB will use when calling the .mex file
  *
@@ -559,7 +564,7 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
 
 
     // Set up angle array for the pathfinder to chose from
-    angles = linSpace(-M_PI_4, M_PI_4, M_PI_4/ANGLE_DIVISIONS);
+    angles = linSpace(-ANGLE_LIMIT, ANGLE_LIMIT, ANGLE_DIVISIONS);
 
     // Create start and end node
     start_node = new Node(NULL, start_x, start_y, 0);
@@ -595,3 +600,5 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
 
     cout << "End of program :'(" << endl;
 }
+
+#endif
