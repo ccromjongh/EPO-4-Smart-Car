@@ -1,0 +1,10 @@
+function new = NewOpen(x,y,xp,yp,h,g,f)
+new=[1,8];
+new(1,1)=x;
+new(1,2)=y;
+new(1,3)=xp;
+new(1,4)=yp;
+new(1,5)=h;
+new(1,6)=g;
+new(1,7)=f;
+new(1,8)=1;
