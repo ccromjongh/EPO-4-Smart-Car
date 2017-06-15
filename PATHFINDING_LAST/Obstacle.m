@@ -1,18 +1,20 @@
-function FIELD = Obstacle(FIELD, r, n)
+function FIELD = Obstacle(FIELD, r, n,res)
 
 for i = 1:n;
     prompt = sprintf('x location obstacle %d  [cm] = ',i);
-    Xb(i) = input(prompt)/5;
+    Xb(i) = ceil(input(prompt)/res);
     prompt = sprintf('y location obstacle %d [cm] = ',i);
-    Yb(i) = input(prompt)/5;
+    Yb(i) = ceil(input(prompt)/res);
 end
 
 for i = 1:n;
     Xtemp = Xb(i);
     Ytemp = Yb(i);
-    for k = 0:2*r
-        for j = 0:2*r;
-    FIELD(Ytemp-r+j,Xtemp-r+k) = 1;
+    r2 = ceil(2*r/res);
+    r1 = ceil(r2/2);
+    for k = -r1:1:r1
+        for j = -r1:1:r1;
+    FIELD(Ytemp+j,Xtemp+k) = 1;
         end
     end
 end
