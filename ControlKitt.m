@@ -25,6 +25,8 @@ while true
     % Get current diameter from c++ routing
     [x_nav, y_nav, ang_nav] = main(start_location(1), start_location(2), start_angle, final_location(1), final_location(2));
     radius_arr = 0.5 * r1 * tan(0.5 * (pi - ang_nav));
+    % Filter out infinite measurements
+    radius_arr(radius_arr > 1E6) = 0;
     Diameter = 2*radius_arr(1);
 
     % Use diameter to set direction
