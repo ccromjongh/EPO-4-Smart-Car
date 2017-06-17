@@ -1,12 +1,16 @@
 r1 = 0.10;  % meter
+dy = -1;
+
 start_x = -0.235;
-start_y = -1.325;
-start_ang = -pi/2;
+start_y = -1.325 + dy;
+start_ang = pi/2;
 end_x = 2.38;
-end_y = -0.7;
+end_y = -0.7 + dy;
+
+obstacles = [0.9, -1.44];
 
 tic;
-[x, y, ang] = main(start_x, start_y, start_ang, end_x, end_y);
+[x, y, ang] = main([start_x, start_y], start_ang, [end_x, end_y], [-2.5 2.5 -2.5 2.5], obstacles);
 completion_time = toc;
 
 hold off;

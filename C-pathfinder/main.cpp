@@ -25,6 +25,7 @@ using namespace std;
 #define ANGLE_DIVISIONS 6
 
 #define RADIUS_MULTIPLIER 100
+#define OBSTACLE_RADIUS 0.4
 
 class Node
 {
@@ -54,13 +55,19 @@ public:
     void before(PathNode *insert), after(PathNode *insert);
 };
 
-double start_x = 0.35, start_y = -0.12, start_angle = M_PI;
-double end_x = 2.39, end_y = 1.68, end_angle = M_PI_2;
+struct Obstacle {
+    double x = 0, y = 0;
+};
+
+double start_x = -0.235, start_y = -1.325, start_angle = -M_PI_2;
+double end_x = 2.38, end_y = -0.7, end_angle = M_PI_2;
+double field_x_min = -2.5, field_x_max = 2.5, field_y_min = -2.5, field_y_max = 2.5;
 unsigned long nodesChosen = 0, nodesLookedAt = 0, maxStepsTillNow = 0;
 
 Node *start_node, *end_node;
 
 vector<double> angles;
+vector<Obstacle> obstacles;
 
 unsigned int costFunction (Node *current);
 void printRoute(PathNode *destination);
@@ -342,6 +349,26 @@ unsigned int costFunction (Node *current) {
     return estm_cost;
 }
 
+bool checkObstacles(double x, double y) {
+    for (int i = 0; i < obstacles.size(); ++i) {
+        if (calcRadius(obstacles[i].x - x, obstacles[i].y - y) < OBSTACLE_RADIUS) {
+            //printf("Obstacle check returns false\n");
+            return false;
+        }
+    }
+    //printf("Obstacle check returns true\n");
+    return true;
+}
+
+bool checkPerimeter(double x, double y) {
+    if (x > field_x_min && x < field_x_max && y > field_y_min && y < field_y_max) {
+        //printf("Perimeter returns true\n");
+        return true;
+    }
+    //printf("Perimeter returns false\n");
+    return false;
+}
+
 PathNode *seekPath() {
     PathNode *startPathNode, *openList, *working, *pathNodeOption;
     startPathNode = new PathNode(start_node);
@@ -359,16 +386,26 @@ PathNode *seekPath() {
             double _x = working->mapNode->x + RADIUS * cos(angle);
             double _y = working->mapNode->y + RADIUS * sin(angle);
 
-            nodeOption = new Node(working->mapNode, _x, _y);
-            pathNodeOption = new PathNode(nodeOption);
-			nodesLookedAt++;
+            //printf("I hate MATLAB; j = %d\t_x = %.2lf\t_y = %.2lf\n", j, _x, _y);
 
-            if (nodesLookedAt > 75000) { goto NoPath; }
-            /*if (calcRadius(nodeOption, end_node) <= END_TOLLERANCE) {
-                goto reachedEnd;
-            }*/
-	
-			placeSorted(&openList, pathNodeOption);
+            if (checkObstacles (_x, _y) && checkPerimeter(_x, _y)) {
+                nodeOption = new Node(working->mapNode, _x, _y);
+                pathNodeOption = new PathNode(nodeOption);
+                nodesLookedAt++;
+
+                if (nodesLookedAt > 25000) { goto NoPath; }
+                /*if (calcRadius(nodeOption, end_node) <= END_TOLLERANCE) {
+                    goto reachedEnd;
+                }*/
+
+                placeSorted(&openList, pathNodeOption);
+            }
+        }
+
+        if (openList == NULL)
+        {
+            NoPath: printf("\n! No path could be found !\n\nLooked at %d nodes, chose %d, but it didn't work out\n", nodesLookedAt, nodesChosen);
+            return NULL;
         }
 
         distance_to_target = calcRadius(openList->mapNode, end_node);
@@ -381,12 +418,6 @@ PathNode *seekPath() {
             #else
                 goto reachedEnd;
             #endif
-        }
-
-        if (openList == NULL)
-        {
-            NoPath: cout << "No path could be found!" << endl;
-            return NULL;
         }
 
         nodesChosen++;
@@ -407,8 +438,6 @@ PathNode *seekPath() {
 
         //removeFromList(openList);
         openList = openList->next;
-        //x = working->mapNode->x;
-        //y = working->mapNode->y;
     }
 
     reachedEnd: cout << "Found a path, yay!" << endl;
@@ -457,9 +486,11 @@ void printRoute(PathNode *destination) {
 
 PathNode *backtrace (PathNode *destination, size_t *pathLength = nullptr)
 {
-	size_t nNodes = 1;
+    printf("Do I even reach this point?\n");
+	size_t nNodes = 0;
     Node *ptr = destination->mapNode;
     PathNode *list = new PathNode(ptr);
+    printf("This is fine\n");
 
     // Trace to parent, and add it before the current item in the list
     while ((ptr = ptr->parent) != NULL)
@@ -469,7 +500,9 @@ PathNode *backtrace (PathNode *destination, size_t *pathLength = nullptr)
         list = list->prev;
 		nNodes++;
     }
-	
+
+    printf("We still good?\n");
+
 	if (pathLength) {
 		*pathLength = nNodes;
 	}
@@ -492,7 +525,10 @@ int main() {
 
 
     PathNode *route = seekPath();
-    printRoute(route);
+
+    if (route) {
+        printRoute(route);
+    }
 
     std::cout << "End of program :'(" << std::endl;
     return 0;
@@ -509,10 +545,11 @@ int main() {
  *  nrhs    Number of input variables                           nargin
  *  prhs    Array of mxArray pointers to the input variables    varargin
  *
- *  MATLAB syntax: [x_arr, y_arr] = main(start_x, start_y, start_angle, end_x, end_y)
+ *  MATLAB syntax: [x_arr, y_arr, ang_arr] = main([start_x, start_y], start_angle, [end_x, end_y], [field_x_min field_x_max field_y_min field_y_max], obstacles)
  *
  **/
 
+#define MX_NUM_EL(P) mxGetNumberOfElements(P)
 #define IS_REAL_DOUBLE(P) (!mxIsComplex(P) && !mxIsSparse(P) && mxIsDouble(P))
 #define IS_SINGLE_NUMBER(P) (IS_REAL_DOUBLE(P) && mxGetNumberOfElements(P) == 1)
 #define IS_REAL_2D_FULL_DOUBLE(P) (!mxIsComplex(P) && \
@@ -521,15 +558,8 @@ int main() {
 
 void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
 
-    /* Macros for the ouput and input arguments */
-    #define B_OUT plhs[0]
-
-    #define A_IN prhs[0]
-    #define P_IN prhs[1]
-
-
     // Check the number of in- and output arguments
-    if (nrhs < 5) {
+    if (nrhs < 4) {
         mexErrMsgTxt("You are missing some input arguments.");
     } else if (nrhs > 5) {
         mexErrMsgTxt("You have too many input arguments.");
@@ -537,31 +567,72 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
         mexErrMsgTxt("Too many output arguments.");
     }
 
-    // Check if data is in the right format
-    if (!IS_SINGLE_NUMBER(prhs[0]) || !IS_SINGLE_NUMBER(prhs[1]) || !IS_SINGLE_NUMBER(prhs[2]) || !IS_SINGLE_NUMBER(prhs[3]) || !IS_SINGLE_NUMBER(prhs[4])) {
-        mexErrMsgTxt("All the coordinates and angles should be single real scalars.");
+    // Check if input arguments are in the right format
+    if (!(IS_REAL_DOUBLE(prhs[0]) && MX_NUM_EL(prhs[0]) == 2)) {
+        mexErrMsgTxt("First argument should be [x_start, y_start].");
+    }
+    if (!IS_SINGLE_NUMBER(prhs[1])) {
+        mexErrMsgTxt("Second argument should be the starting angle in radians as a single number.");
+    }
+    if (!(IS_REAL_DOUBLE(prhs[2]) && MX_NUM_EL(prhs[2]) == 2)) {
+        mexErrMsgTxt("Third argument should be [x_end, y_end].");
+    }
+    if (!(IS_REAL_DOUBLE(prhs[3]) && MX_NUM_EL(prhs[3]) == 4)) {
+        mexErrMsgTxt("Fourth argument should be [field_x_min, field_x_max, field_y_min, field_y_max].");
+    }
+    if (!(IS_REAL_DOUBLE(prhs[3]) && MX_NUM_EL(prhs[3])%2 == 0 && mxGetNumberOfDimensions(prhs[3]) == 2)) {
+        mexErrMsgTxt("Format of fifth argument should be [obst1_x, obst1_y; obst2_x, obst2_y; ...].");
     }
 
+    printf("Format of input arguments checked\n\n");
+
+    // Reset this, not sure if needed or not
+    nodesChosen = 0, nodesLookedAt = 0, maxStepsTillNow = 0;
+
     // Setting the start and endpoint data from the input
-    start_x = mxGetScalar(prhs[0]);
-    start_y = mxGetScalar(prhs[1]);
-    start_angle = mxGetScalar(prhs[2]);
-    end_x = mxGetScalar(prhs[3]);
-    end_y = mxGetScalar(prhs[4]);
+    double *A = mxGetPr(prhs[0]);
+    start_x = A[0];
+    start_y = A[1];
 
-//    M = mxGetM(A IN); /* Get the dimensions of A */
-//    N = mxGetN(A IN);
-//    A = mxGetPr(A IN); /* Get the pointer to the data of A */
-//    B_OUT = mxCreateDoubleMatrix(M, N, mxREAL); /* Create the output matrix */
-//    B = mxGetPr(B OUT); /* Get the pointer to the data of B */
-//    for(n = 0; n < N; n++) /* Compute a matrix with normalized columns */
-//    {
-//        for (m = 0, colnorm = 0.0; m < M; m++) { colnorm += pow(A[m + M * n], p); }
-//        colnorm = pow(fabs(colnorm), 1.0 / p); /* Compute the norm of the nth column */
-//
-//        for (m = 0; m < M; m++) { B[m + M * n] = A[m + M * n] / colnorm; }
-//    }
+    start_angle = mxGetScalar(prhs[1]);
 
+    // End coordinate params
+    A = mxGetPr(prhs[2]);
+    end_x = A[0];
+    end_y = A[1];
+
+    printf("Start_x = %.2lf m, start_y = %.2lf m, start_angle = %.2lf rad\n", start_x, start_y, start_angle);
+    printf("End_x = %.2lf m, end_y = %.2lf m\n", end_x, end_y);
+
+    // Field size params
+    A = mxGetPr(prhs[3]);
+    field_x_min = A[0];
+    field_x_max = A[1];
+    field_y_min = A[2];
+    field_y_max = A[3];
+
+    printf("Field dimensions are [field_x_min = %.2lf, field_x_max = %.2lf, field_y_min = %.2lf, field_y_max = %.2lf]\n\n",
+           field_x_min, field_x_max, field_y_min, field_y_max);
+
+    // Only if the obstacles are set as an input argument, process them
+    if (nrhs == 5) {
+        // Put all the obstacles in a vector
+        A = mxGetPr(prhs[4]);
+        size_t M = mxGetM(prhs[4]); // Should be the number of obstacles
+        //size_t N = mxGetN(prhs[4]); // Should be 2
+
+        printf("Reading obstacles\n");
+
+        // For some reason, MATLAB indexes in rows of a column and then wraps to the next column
+        for (int m = 0; m < M; ++m) {
+            Obstacle ob;
+            ob.x = A[m];
+            ob.y = A[m + M];
+            obstacles.push_back(ob);
+
+            printf("m = %d\n", m);
+        }
+    }
 
     // Set up angle array for the pathfinder to chose from
     angles = linSpace(-ANGLE_LIMIT, ANGLE_LIMIT, ANGLE_DIVISIONS);
@@ -575,28 +646,52 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
     start_node->estm_cost = costFunction(start_node);
     end_node->set_abs_angle(end_angle);
 
+    printf("Start & end nodes and angle array created\n");
+
     PathNode *route = seekPath();
     // printRoute(route);
-	
-	size_t nNodes;
-	PathNode *path_list = backtrace(route, &nNodes);
-	
-	phls[0] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
-	phls[1] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
-	phls[2] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
-	
-	double *x_mat = mxGetPr(phls[0]);
-	double *y_mat = mxGetPr(phls[1]);
-	double *ang_mat = mxGetPr(phls[2]);
-	
-	PathNode *ptr = path_list;
-	
-	for (int i = 0; i < nNodes; ++i) {
-		x_mat[i] = ptr->mapNode->x;
-		y_mat[i] = ptr->mapNode->y;
-		ang_mat[i] = ptr->mapNode->get_rel_angle();
-		ptr = ptr->next;
-	}
+
+    if (route) {
+        printf("Path successfully found\n");
+
+        size_t nNodes;
+        PathNode *path_list = backtrace(route, &nNodes);
+
+        printf("Path traced from destination to start\n");
+
+        phls[0] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
+        phls[1] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
+        phls[2] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
+
+        printf("Matrices created\n");
+
+        double *x_mat = mxGetPr(phls[0]);
+        double *y_mat = mxGetPr(phls[1]);
+        double *ang_mat = mxGetPr(phls[2]);
+
+        PathNode *ptr = path_list;
+
+        printf("Filling matrices...\n");
+
+        for (int i = 0; i < nNodes; ++i) {
+            x_mat[i] = ptr->mapNode->x;
+            y_mat[i] = ptr->mapNode->y;
+            ang_mat[i] = ptr->mapNode->get_rel_angle();
+            ptr = ptr->next;
+        }
+    } else {
+        phls[0] = mxCreateDoubleMatrix(1, 1, mxREAL);
+        phls[1] = mxCreateDoubleMatrix(1, 1, mxREAL);
+        phls[2] = mxCreateDoubleMatrix(1, 1, mxREAL);
+
+        double *x_mat = mxGetPr(phls[0]);
+        double *y_mat = mxGetPr(phls[1]);
+        double *ang_mat = mxGetPr(phls[2]);
+
+        x_mat[0] = 0.0;
+        y_mat[0] = 0.0;
+        ang_mat[0] = 0.0;
+    }
 
     cout << "End of program :'(" << endl;
 }
