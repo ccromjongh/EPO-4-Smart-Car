@@ -68,6 +68,7 @@ Node *start_node, *end_node;
 
 vector<double> angles;
 vector<Obstacle> obstacles;
+vector<Node *> closed_list;
 
 unsigned int costFunction (Node *current);
 void printRoute(PathNode *destination);
@@ -315,6 +316,15 @@ unsigned int costFunction (Node *current) {
     double virt_distance = calcRadius(end_node->x - virt_x, end_node->y - virt_y) + 0.3 * radius;
     estm_cost += (virt_distance * RADIUS_MULTIPLIER);
 
+    // Add cost for the proximity to obstacles
+    for (int i = 0; i < obstacles.size(); ++i) {
+        radius = calcRadius(obstacles[i].x - current->x, obstacles[i].y - current->y);
+        virt_x = current->x + 0.3 * radius * cos(current->get_abs_angle());
+        virt_y = current->y + 0.3 * radius * sin(current->get_abs_angle());
+        virt_distance = calcRadius(obstacles[i].x - virt_x, obstacles[i].y - virt_y) + 0.3 * radius;
+        estm_cost += 300 / pow(virt_distance - OBSTACLE_RADIUS, 1.5);
+    }
+
     // If we have a parent, add the cost of the steps already taken to the path length cost
     if (current->parent)
     {
@@ -394,9 +404,6 @@ PathNode *seekPath() {
                 nodesLookedAt++;
 
                 if (nodesLookedAt > 25000) { goto NoPath; }
-                /*if (calcRadius(nodeOption, end_node) <= END_TOLLERANCE) {
-                    goto reachedEnd;
-                }*/
 
                 placeSorted(&openList, pathNodeOption);
             }
@@ -409,7 +416,7 @@ PathNode *seekPath() {
         }
 
         distance_to_target = calcRadius(openList->mapNode, end_node);
-        if (openList && distance_to_target <= END_TOLLERANCE) {
+        if (distance_to_target <= END_TOLLERANCE) {
             #if (ENFORCE_ANGLE)
                 double tollerance_compare = end_angle_difference(openList->mapNode);
                 if (tollerance_compare < END_ANGLE_TOLLERANCE) {
@@ -430,6 +437,7 @@ PathNode *seekPath() {
         }
 
         // FIXME: Closed list is not strictly implemented, this leads to a memory leak
+
         // Free the working PathNode, since we only need the Node to  track it back
         free(working);
 
@@ -437,7 +445,9 @@ PathNode *seekPath() {
         working = openList;
 
         //removeFromList(openList);
+        closed_list.push_back(openList->mapNode);
         openList = openList->next;
+        openList->prev = nullptr;
     }
 
     reachedEnd: cout << "Found a path, yay!" << endl;
@@ -545,7 +555,7 @@ int main() {
  *  nrhs    Number of input variables                           nargin
  *  prhs    Array of mxArray pointers to the input variables    varargin
  *
- *  MATLAB syntax: [x_arr, y_arr, ang_arr] = main([start_x, start_y], start_angle, [end_x, end_y], [field_x_min field_x_max field_y_min field_y_max], obstacles)
+ *  MATLAB syntax: [x_arr, y_arr, ang_arr, success] = main([start_x, start_y], start_angle, [end_x, end_y], [field_x_min field_x_max field_y_min field_y_max], obstacles)
  *
  **/
 
@@ -563,7 +573,7 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
         mexErrMsgTxt("You are missing some input arguments.");
     } else if (nrhs > 5) {
         mexErrMsgTxt("You have too many input arguments.");
-    } else if (nlhs > 3) {
+    } else if (nlhs > 4) {
         mexErrMsgTxt("Too many output arguments.");
     }
 
@@ -662,6 +672,7 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
         phls[0] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
         phls[1] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
         phls[2] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
+        phls[3] = mxCreateDoubleScalar(1);
 
         printf("Matrices created\n");
 
@@ -680,17 +691,32 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
             ptr = ptr->next;
         }
     } else {
-        phls[0] = mxCreateDoubleMatrix(1, 1, mxREAL);
-        phls[1] = mxCreateDoubleMatrix(1, 1, mxREAL);
-        phls[2] = mxCreateDoubleMatrix(1, 1, mxREAL);
+        size_t nNodes = closed_list.size();
+        phls[0] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
+        phls[1] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
+        phls[2] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
+        phls[3] = mxCreateDoubleScalar(0);
 
         double *x_mat = mxGetPr(phls[0]);
         double *y_mat = mxGetPr(phls[1]);
         double *ang_mat = mxGetPr(phls[2]);
 
-        x_mat[0] = 0.0;
+        /*x_mat[0] = 0.0;
         y_mat[0] = 0.0;
-        ang_mat[0] = 0.0;
+        ang_mat[0] = 0.0;*/
+
+        for (int i = 0; i < nNodes; ++i) {
+            x_mat[i] = closed_list[i]->x;
+            y_mat[i] = closed_list[i]->y;
+            ang_mat[i] = closed_list[i]->get_rel_angle();
+            delete(closed_list[i]);
+        }
+
+        /*for (vector<Node *>::iterator it = closed_list.begin() ; it != closed_list.end(); ++it)
+        {
+            delete (*it);
+        }
+        closed_list.clear();*/
     }
 
     cout << "End of program :'(" << endl;

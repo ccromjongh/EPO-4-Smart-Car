@@ -1,5 +1,7 @@
-r1 = 0.10;  % meter
-dy = -1;
+r1 = 0.10;  % Meter per segement
+r2 = 0.40;  % Meter to stay away from obstacles
+%dy = -1;
+dy = 0;
 
 start_x = -0.235;
 start_y = -1.325 + dy;
@@ -10,12 +12,16 @@ end_y = -0.7 + dy;
 obstacles = [0.9, -1.44];
 
 tic;
-[x, y, ang] = main([start_x, start_y], start_ang, [end_x, end_y], [-2.5 2.5 -2.5 2.5], obstacles);
+[x, y, ang, success] = main([start_x, start_y], start_ang, [end_x, end_y], [-2.5 2.5 -2.5 2.5], obstacles);
 completion_time = toc;
 
 hold off;
 
-plot(x, y);
+if (success)
+    plot(x, y);
+else
+    plot(x, y, '+');
+end
 
 hold on;
 
@@ -27,6 +33,11 @@ p.MarkerSize = 8;
 p = plot(end_x, end_y, 'o');
 p.LineWidth = 1.5;
 p.MarkerSize = 8;
+
+[nObstacles, ~] = size(obstacles);
+for i=1:nObstacles
+   circle(obstacles(i, 1), obstacles(i, 2), r2);
+end
 
 axis([-2.5 2.5 -2.5 2.5]); pbaspect([1 1 1]);
 
