@@ -1,7 +1,7 @@
 r1 = 0.10;  % Meter per segement
 r2 = 0.40;  % Meter to stay away from obstacles
-%dy = -1;
-dy = 0;
+dy = -0.6;
+%dy = 0;
 
 start_x = -0.235;
 start_y = -1.325 + dy;
@@ -10,9 +10,14 @@ end_x = 2.38;
 end_y = -0.7 + dy;
 
 obstacles = [0.9, -1.44];
+%obstacles = [];
 
 tic;
-[x, y, ang, success] = main([start_x, start_y], start_ang, [end_x, end_y], [-2.5 2.5 -2.5 2.5], obstacles);
+try
+    [x, y, ang, success] = main([start_x, start_y], start_ang, [end_x, end_y], [-2.5 2.5 -2.5 2.5], obstacles);
+catch
+    disp('Well, something went wrong, apparently');
+end
 completion_time = toc;
 
 hold off;

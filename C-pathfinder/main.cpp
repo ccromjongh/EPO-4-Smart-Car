@@ -22,7 +22,7 @@ using namespace std;
 #define ENFORCE_ANGLE false
 //#define ANGLE_LIMIT (M_PI_4/6)             // 45/6 = 7.5 deg
 #define ANGLE_LIMIT 0.1210640396             // minimum diameter of 1.65 meter
-#define ANGLE_DIVISIONS 6
+#define ANGLE_DIVISIONS 4
 
 #define RADIUS_MULTIPLIER 100
 #define OBSTACLE_RADIUS 0.4
@@ -322,7 +322,7 @@ unsigned int costFunction (Node *current) {
         virt_x = current->x + 0.3 * radius * cos(current->get_abs_angle());
         virt_y = current->y + 0.3 * radius * sin(current->get_abs_angle());
         virt_distance = calcRadius(obstacles[i].x - virt_x, obstacles[i].y - virt_y) + 0.3 * radius;
-        estm_cost += 300 / pow(virt_distance - OBSTACLE_RADIUS, 1.5);
+        estm_cost += 2 / pow(virt_distance - OBSTACLE_RADIUS, 1.5);
     }
 
     // If we have a parent, add the cost of the steps already taken to the path length cost
@@ -378,6 +378,47 @@ bool checkPerimeter(double x, double y) {
     //printf("Perimeter returns false\n");
     return false;
 }
+
+void deleteList(PathNode *pNode) {
+    PathNode *ptr = pNode;
+    // PathNode *temp = pNode;
+    free(ptr->mapNode);
+
+    while ((ptr = ptr->next) != nullptr) {
+        free(ptr->mapNode);
+        free(ptr->prev);
+    }
+
+    free(ptr);
+}
+
+void deleteList(vector<Node *> *node_list) {
+    vector<Node *> *ptr = node_list;
+
+    for (vector<Node *>::iterator it = (*ptr).begin() ; it != (*ptr).end(); ++it)
+    {
+        delete (*it);
+    }
+    (*ptr).clear();
+}
+
+/*template <typename T>
+void deleteList (vector<T *> *list_ptr) {
+    for (vector<T *>::iterator it = (*list_ptr).begin(); it != (*list_ptr).end(); ++it)
+    {
+        delete (*it);
+    }
+    (*list_ptr).clear();
+}
+
+template <typename T>
+void deleteList (vector<T> *list_ptr) {
+    for (vector<T>::iterator it = (*list_ptr).begin(); it != (*list_ptr).end(); ++it)
+    {
+        delete it;
+    }
+    (*list_ptr).clear();
+}*/
 
 PathNode *seekPath() {
     PathNode *startPathNode, *openList, *working, *pathNodeOption;
@@ -453,9 +494,9 @@ PathNode *seekPath() {
     reachedEnd: cout << "Found a path, yay!" << endl;
 
     // Cleanup of all objects
-    //deleteList(working);
-    //deleteList(openList); //Not needed because of working = openList;
-    //resetMap(false, false);
+    deleteList(openList->next);
+    openList->next = nullptr;
+
     return openList;
 }
 
@@ -539,6 +580,8 @@ int main() {
     if (route) {
         printRoute(route);
     }
+
+    deleteList(route);
 
     std::cout << "End of program :'(" << std::endl;
     return 0;
@@ -640,7 +683,14 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
             ob.y = A[m + M];
             obstacles.push_back(ob);
 
-            printf("m = %d\n", m);
+            printf("Obstacle @ x = %.2lf, y = %.2lf\n", ob.x, ob.y);
+        }
+
+        printf("\nNow again checking the <Obstacle *> vector\n");
+
+        for (vector<Obstacle>::iterator it = obstacles.begin() ; it != obstacles.end(); ++it)
+        {
+            printf("Obstacle @ x = %.2lf, y = %.2lf\n", it->x, it->y);
         }
     }
 
@@ -690,6 +740,9 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
             ang_mat[i] = ptr->mapNode->get_rel_angle();
             ptr = ptr->next;
         }
+
+        deleteList(route);
+        deleteList(path_list);
     } else {
         size_t nNodes = closed_list.size();
         phls[0] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
@@ -709,7 +762,6 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
             x_mat[i] = closed_list[i]->x;
             y_mat[i] = closed_list[i]->y;
             ang_mat[i] = closed_list[i]->get_rel_angle();
-            delete(closed_list[i]);
         }
 
         /*for (vector<Node *>::iterator it = closed_list.begin() ; it != closed_list.end(); ++it)
@@ -719,7 +771,8 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
         closed_list.clear();*/
     }
 
-    cout << "End of program :'(" << endl;
+    deleteList(&closed_list);
+    obstacles.clear();
 }
 
 #endif
