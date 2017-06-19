@@ -89,6 +89,7 @@ end
 
 
 %% Path
+figure(1)
 i=size(CLOSED,1);
 Optimal_path=[];
 Xs=CLOSED(i,1);
