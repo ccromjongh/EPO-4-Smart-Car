@@ -11,7 +11,7 @@ KITT = testClass;
 % To suppress MATLAB's itching
 Nrp = 4; Fs = 96000;
 load audiodata_96k.mat;
-Nrp = Nrp - 1;
+Nrp = Nrp - 2;
 latency = 0.03;
 
 Trec = Nrp/Timer3 + 0.1;                % Record data segment length
@@ -21,7 +21,7 @@ sampleCount = floor(Trec*Fs);           % The number of samples of the recorded 
 %% Initialise and start recording
 
 if (~demo_mode)
-    initialise_audio_box(Fs, true);
+    initialise_audio_box(Fs, false);
 
     % Set up beacon
     KITT.toggleBeacon(false);
@@ -80,7 +80,11 @@ for i = 1:nchan
     % Get channel estimation
     temp_h = abs(ch2(x,y(:,i)));
     % Normalize values
-    h(:, i) = temp_h(2000:end)/max(temp_h(2000:end));
+    if (length(temp_h) > 7800)
+        h(:, i) = temp_h(2000:5800)/max(temp_h(2000:5800));
+    else
+        h(:, i) = temp_h(2000:end)/max(temp_h(2000:end));
+    end
 end
     
 Hmax = h_peak_finder(h);

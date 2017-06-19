@@ -4,19 +4,19 @@ clear variables;
 nchan = 5;
 max_distance = 500;
 min_distance = 50;
-checkpoint = 2;
+checkpoint = 1;
 Vs = 340.29;
 do_absolute = true;
-demo_mode = true;
+demo_mode = false;
 KITT = testClass;
-latency = 0.03;
+latency = 0.05;
 
 JSON = fileread('field_K.json');
 field_data = jsondecode(JSON);
 clear JSON;
 
-load audiodata_96k.mat;
-Nrp = Nrp - 1;
+load audiodata_96k2.mat;
+Nrp = Nrp - 2;
 
 
 Trec = Nrp/Timer3 + 0.1;                % Record data segment length
@@ -90,7 +90,7 @@ for i = 1:nchan
     y(:, i) = y(:, i)/y_max(i);
 
 
-    eps = 0.2;
+    eps = 0.1;
     ii = abs(y(:, i)) <= eps;
     y(ii, i) = 0;
     
@@ -181,7 +181,11 @@ for i = 1:nchan
     % Get channel estimation
     temp_h = abs(ch2(x,y(:,i)));
     % Normalize values
-    h(:, i) = temp_h(2000:end)/max(temp_h(2000:end));
+    if (length(temp_h) > 7800)
+        h(:, i) = temp_h(2000:5800)/max(temp_h(2000:5800));
+    else
+        h(:, i) = temp_h(2000:end)/max(temp_h(2000:end));
+    end
 end
 
 Hmax = h_peak_finder(h);

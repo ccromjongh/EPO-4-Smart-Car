@@ -23,7 +23,8 @@ while true
     location = [location; [x y]];
 
     % Get current diameter from c++ routing
-    [x_nav, y_nav, ang_nav] = main(start_location(1), start_location(2), start_angle, final_location(1), final_location(2));
+    perimeter = [field_data.field.x_min field_data.field.x_max field_data.field.y_min field_data.field.y_max];
+    [x_nav, y_nav, ang_nav, success] = main(start_location, start_angle, final_location, perimeter);
     radius_arr = 0.5 * r1 * tan(0.5 * (pi - ang_nav));
     % Filter out infinite measurements
     radius_arr(radius_arr > 1E6) = 0;
