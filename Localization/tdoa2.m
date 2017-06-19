@@ -1,4 +1,4 @@
-function [x y z] = tdoa2(Sen_position , Hmax, Fs)
+function [x, y, z] = tdoa2(Sen_position , Hmax, Fs)
 
 Vs = 34029;
 

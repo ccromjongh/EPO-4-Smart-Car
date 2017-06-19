@@ -12,6 +12,7 @@ KITT = testClass;
 Nrp = 4; Fs = 96000;
 load audiodata_96k.mat;
 Nrp = Nrp - 1;
+latency = 0.03;
 
 Trec = Nrp/Timer3 + 0.1;                % Record data segment length
 Tbeacon = (Nrp - 0.2)/Timer3;           % Time the beacon should stay on
@@ -50,7 +51,11 @@ if (~demo_mode)
     end
 
     % Get data
-    y = get_record(page);
+    recorded = get_record(page);
+    
+    throwaway = round(latency*Fs);
+    y = recorded(throwaway:end, :);
+    clear recorded;
     
     % Save recording for later use in demo_mode
     save('Recordings/last_TDOA_rec.mat', 'y');
@@ -58,29 +63,29 @@ else
     load('Recordings/last_TDOA_rec.mat');
 end
 
-%% Sort signals based on amplitude time detection
+y_max = max(abs(y));
+for i = 1:nchan
+    % Normalize vector
+    y(:, i) = y(:, i)/y_max(i);
 
-Hmax = zeros(1, nchan);
+
+    eps = 0.2;
+    ii = abs(y(:, i)) <= eps;
+    y(ii, i) = 0;
+end
+
+%% Find channel estimations
 
 for i = 1:nchan
     % Get channel estimation
-    h(:,i) = abs(ch2(x,y(:,i)));
+    temp_h = abs(ch2(x,y(:,i)));
     % Normalize values
-    h(:,i) = h(:,i)/max(h(:,i));
+    h(:, i) = temp_h(2000:end)/max(temp_h(2000:end));
+end
     
-    % Find all peaks that are higher than 0.5
-    [~, lc] = findpeaks(h(:,i), 'Minpeakheight', 0.5);
-    firstPeak = lc(1);
+Hmax = h_peak_finder(h);
     
-    % Find the maximum value within 50 samples from the initial peak, to
-    % really get the maximum peak
-    [pk, lc] = max(h(firstPeak:firstPeak + 50, i));
-    
-    % Location of the peak is the index of the max + the offset where we
-    % looked - 1 because of stupid matlab indexing
-    lc = lc + firstPeak - 1;
-    Hmax(i) = lc;
-    
+for i = 1:nchan
     if (plot_data)
         % Create time axis
         th = (0:(length(h) - 1))/Fs;
@@ -96,7 +101,7 @@ for i = 1:nchan
         hold on;
 
         % Plot the chosen peak
-        p = plot((lc-1)/Fs, pk, 'x');
+        p = plot((Hmax(i)-1)/Fs, h(Hmax(i), i), 'x');
         p.LineWidth = 1.5;
         p.MarkerSize = 8;
     end
