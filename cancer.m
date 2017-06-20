@@ -1,5 +1,5 @@
 demo_record = true;
-demo_drive = false;
+demo_drive = true;
 
 %% Setup
 JSON = fileread('field_K.json');
@@ -151,14 +151,14 @@ while true
     end
     
     if (~demo_drive)
-        KITT.setMotorSpeed(15);
+        KITT.setMotorSpeed(0); pause(0.3); KITT.setMotorSpeed(15);
     end
     % If within 30 cm of final location, break & brake
     final_radius = coord_radius(final_location, location(loc_index,:));
     fprintf('\n@t = %.2f: Final radius is %.2f\n', toc, final_radius);
     if (final_radius < 0.3)
         if (~demo_drive)
-            KITT.setMotorSpeed(0); pause(0.3); KITT.setMotorSpeed(15);
+            KITT.setMotorSpeed(15);
         end
         fprintf('YEAH Arrived at the destination\n\n');
         break; 
