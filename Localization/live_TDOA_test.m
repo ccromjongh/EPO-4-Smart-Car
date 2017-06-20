@@ -1,15 +1,14 @@
 clear variables;
-% Fs = 96000;
 
+Fs = 96000;
 nchan = 5;
 max_distance = 500;
 min_distance = 50;
 checkpoint = 1;
 Vs = 340.29;
-do_absolute = true;
-demo_mode = false;
-KITT = testClass;
 latency = 0.05;
+demo_mode = true;
+KITT = testClass;
 
 JSON = fileread('field_K.json');
 field_data = jsondecode(JSON);
