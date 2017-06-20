@@ -12,6 +12,8 @@ function Hdist = process_cancer_recording (page, nchan)
     else
         load('Recordings/last_TDOA_rec.mat');
     end
+    
+    load audiodata_96k2.mat;
 
     y_max = max(abs(y));
     for i = 1:nchan
@@ -28,7 +30,7 @@ function Hdist = process_cancer_recording (page, nchan)
 
     for i = 1:nchan
         % Get channel estimation
-        temp_h = abs(ch2(x,y(:,i)));
+        temp_h = abs(ch2(x, y(:,i), true));
         % Normalize values
         if (length(temp_h) > 7800)
             h(:, i) = temp_h(2000:5800)/max(temp_h(2000:5800));
