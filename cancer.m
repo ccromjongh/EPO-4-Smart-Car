@@ -55,21 +55,7 @@ while true
     nav_steps = round(length(ang_nav)/2);
     fprintf('@t = %.2f: Path found, proceding to controlling KITT\n', toc);
     
-    % Plot route
-    figure();
-    hold off;
-    plot(x_nav, y_nav);
-    hold on;
-    p = plot(start_location(1), start_location(2), 'x');
-    p.LineWidth = 1.5;
-    p.MarkerSize = 8;
-    p = plot(final_location(1), final_location(2), 'o');
-    p.LineWidth = 1.5;
-    p.MarkerSize = 8;
-    axis(perimeter); pbaspect([1 1 1]);
-    title('KITT navigation using vertex pathfinding');
-    xlabel('X axis (m)');
-    ylabel('Y axis (m)');
+    plot_route(x_nav, y_nav, location(:,1), final_location);
 
     % Find array of radii from angles given by the navigator
     radius_arr = 0.5 * r1 * tan(0.5 * (pi - ang_nav));
@@ -176,4 +162,24 @@ function rad = coord_radius (arr1, arr2)
     y = arr1(2) - arr2(2);
     rad = sqrt(x^2 + y^2);
     
+end
+
+function plot_route(x_nav, y_nav, start_location, final_location)
+    figure();
+    hold off;
+    plot(x_nav, y_nav);
+    hold on;
+    
+    p = plot(start_location(1), start_location(2), 'x');
+    p.LineWidth = 1.5;
+    p.MarkerSize = 8;
+    
+    p = plot(final_location(1), final_location(2), 'o');
+    p.LineWidth = 1.5;
+    p.MarkerSize = 8;
+    
+    axis(perimeter); pbaspect([1 1 1]);
+    title('KITT navigation using vertex pathfinding');
+    xlabel('X axis (m)');
+    ylabel('Y axis (m)');
 end

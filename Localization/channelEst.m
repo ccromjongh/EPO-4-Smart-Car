@@ -27,7 +27,7 @@ function h = channelEst(gy, use_reference, L_cap, filter)
     end
     
     % Execute FFT
-    Ny = 1E6;
+    %Ny = 1E6;
     Y = complex(zeros(Ny, dim));
     for ii = 1:dim
         Y(:, ii) = fft(gy(:, ii), Ny);

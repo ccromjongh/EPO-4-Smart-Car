@@ -2,13 +2,21 @@ clear variables;
 
 Fs = 96000;
 nchan = 5;
-max_distance = 500;
+max_samples = 1700;
 min_distance = 50;
 checkpoint = 1;
 Vs = 340.29;
 latency = 0.05;
 demo_mode = true;
 KITT = testClass;
+algorithm = 2;
+
+plotstuff = false;
+
+p = gcp('nocreate'); % If no pool, do not create new one.
+if isempty(p)
+    p = gcp();
+end
 
 JSON = fileread('field_K.json');
 field_data = jsondecode(JSON);
@@ -125,70 +133,70 @@ for i = 1:nchan
 end
 
 
-%{ 
+ 
 %% Do channel estimation
-% h = channelEst(x, y, max_distance, true);
-if (do_absolute)
-    % Calculate imulse response from recording using another recording as
-    % reference
-    h = channelEst(y, x, max_distance, true);
-else
-    % Calculate imulse response from recording, relatively
-    h = channelEst(y, 1, max_distance, true);
-end
-
-if do_absolute
+tic;
+if (algorithm == 3)
+    h = channelEst(y, x, max_samples, false);
+    
+    %{
     [maxH, maxHIndex] = max(h(min_distance:end, :));
     maxHIndex = maxHIndex + min_distance;
+
+    [psor,lsor] = findpeaks(h(:, 2), 'SortStr', 'descend');
+    distance = maxHIndex * Vs * 100 / Fs;
+    time = maxHIndex / Fs;
+    Performace = toc;
+    expectedIndex = round(expected*Fs);
+
+    %% Plot impulse response
+
+    %endH = min(2 * maxHIndex, length(h));   % Endpoint of time axis to give a sensible plot
+    endH = repmat(max_distance, 1, 5);
+    for i = 1:nchan
+        th = (0:(endH(i) - 1))/Fs;          % Create h time axis
+        subplot(nchan, 1, i);
+        hold off;
+        stem(th, h(1:endH(i), i));          % Plot impulse response
+        hold on;
+
+        p = stem((maxHIndex(i)-1)/Fs, maxH(i));
+        p.LineWidth = 1.05;
+        ylim([0 1.1]);
+        plot([expected(i) expected(i)], [0 2], '--', 'LineWidth', 1.05);
+
+        title_str = sprintf('Mic %d with relative distance %.2f cm', mic(i), distance(i));
+        title(title_str);
+        ylabel('Amplitude');
+        xlabel('Time [s]');
+    end
+    clear title_str;
+    %}
 else
-    [maxH, maxHIndex] = max(h);
-end
-[psor,lsor] = findpeaks(h(:, 2), 'SortStr', 'descend');
-distance = maxHIndex * Vs * 100 / Fs;
-time = maxHIndex / Fs;
-Performace = toc;
-expectedIndex = round(expected*Fs);
-
-%% Plot impulse response
-
-%endH = min(2 * maxHIndex, length(h));   % Endpoint of time axis to give a sensible plot
-endH = repmat(max_distance, 1, 5);
-for i = 1:nchan
-    th = (0:(endH(i) - 1))/Fs;          % Create h time axis
-    subplot(nchan, 1, i);
-    hold off;
-    stem(th, h(1:endH(i), i));          % Plot impulse response
-    hold on;
-    
-    p = stem((maxHIndex(i)-1)/Fs, maxH(i));
-    p.LineWidth = 1.05;
-    ylim([0 1.1]);
-    plot([expected(i) expected(i)], [0 2], '--', 'LineWidth', 1.05);
-    
-    title_str = sprintf('Mic %d with relative distance %.2f cm', mic(i), distance(i));
-    title(title_str);
-    ylabel('Amplitude');
-    xlabel('Time [s]');
-end
-clear title_str;
-%}
-
-figure(3);
-tic;
-
-for i = 1:nchan
-    % Get channel estimation
-    temp_h = abs(ch2(x,y(:,i)));
-    % Normalize values
-    if (length(temp_h) > 7800)
-        h(:, i) = temp_h(2000:5800)/max(temp_h(2000:5800));
-    else
-        h(:, i) = temp_h(2000:end)/max(temp_h(2000:end));
+    for i = 1:nchan
+        % Get channel estimation
+        temp_h = abs(ch2(x,y(:,i), true));
+        % Normalize values
+        if (length(temp_h) > 7800)
+            h(:, i) = temp_h(2000:5800)/max(temp_h(2000:5800));
+        else
+            h(:, i) = temp_h(2000:end)/max(temp_h(2000:end));
+        end
     end
 end
 
 Hmax = h_peak_finder(h);
-    
+%}
+
+Hdist = Hmax-Hmax(1);
+% Do TDOA estimation and stuff
+[x_calc y_calc z_calc] = tdoa2([field_data.mics.x; field_data.mics.y; field_data.mics.z]', Hdist,Fs); %#ok<NCOMMA>
+
+% Calculate error based on what we expected
+error_distance = sqrt((x_ref - x_calc)^2 + (y_ref - y_calc)^2);
+Performace = toc;
+
+figure(3);
 for i = 1:nchan
     th = (0:(length(h) - 1))/Fs;
     
@@ -206,15 +214,6 @@ for i = 1:nchan
     p.LineWidth = 1.5;
     p.MarkerSize = 8;
 end
-clear firstPeak;
-
-Hdist = Hmax-Hmax(1);
-% Do TDOA estimation and stuff
-[x_calc y_calc z_calc] = tdoa2([field_data.mics.x; field_data.mics.y; field_data.mics.z]', Hdist,Fs); %#ok<NCOMMA>
-
-% Calculate error based on what we expected
-error_distance = sqrt((x_ref - x_calc)^2 + (y_ref - y_calc)^2);
-Performace = toc;
 
 distance = zeros(1,5);
 mics = 1:5;
