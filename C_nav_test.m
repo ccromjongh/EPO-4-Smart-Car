@@ -14,7 +14,8 @@ obstacles = [0.9, -1.44];
 
 tic;
 try
-    [x, y, ang, success] = main([start_x, start_y], start_ang, [end_x, end_y], [-2.5 2.5 -2.5 2.5], obstacles);
+    %[x, y, ang] = main(start_x, start_y, start_ang, end_x, end_y);
+    [x, y, ang, success] = main_broken([start_x, start_y], start_ang, [end_x, end_y], [-2.5 2.5 -2.5 2.5], obstacles);
 catch
     disp('Well, something went wrong, apparently');
 end
