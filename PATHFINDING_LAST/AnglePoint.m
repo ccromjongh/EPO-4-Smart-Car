@@ -35,7 +35,7 @@ end
 %% make the path
 cpath = [];                                         %paste all the points together
 for j = 1:length(path)-4
-    if abs(angleout(j)) > 0 && abs(angleout(j)) < 45
+    if abs(angleout(j)) > 20
         cpath = [cpath; path(j,:)];
         cpath = [cpath; path(j+4,:)];
     end
