@@ -1,4 +1,4 @@
-function FIELD = Obstacle(FIELD, r, n,res)
+function [FIELD Obstacles] = Obstacle(FIELD, r, n,res)
 
 for i = 1:n;
     prompt = sprintf('x location obstacle %d  [cm] = ',i);
@@ -6,6 +6,8 @@ for i = 1:n;
     prompt = sprintf('y location obstacle %d [cm] = ',i);
     Yb(i) = ceil(input(prompt)/res);
 end
+
+Obstacles = [Xb Yb];
 
 for i = 1:n;
     Xtemp = Xb(i);

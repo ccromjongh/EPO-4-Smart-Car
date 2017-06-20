@@ -1,4 +1,4 @@
-function [imin ans] = NewNode(OPEN,c,xt,yt)
+function [imin] = NewNode(OPEN,c,xt,yt)
 
 temp=[];
 k=1;
@@ -27,4 +27,3 @@ if size(temp ~= 0)
 else
     imin=-1;%The temp_array is empty i.e No more paths are available.
 end;
-ans = temp;

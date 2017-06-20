@@ -20,15 +20,15 @@ for i = 1:ch
     if i == 1
         Xg = Xgoal(1);
         Yg = Ygoal(1);
-        [orx, ory] = orientation(Xs, Ys, res);
+%         [orx, ory] = orientation(Xs, Ys, res);
 
     else
         Xs = Xgoal(i-1);
         Ys = Ygoal(i-1);
         Xg = Xgoal(i);
         Yg = Ygoal(i);
-        orx = Xs;
-        ory = Ys;
+%         orx = Xs;
+%         ory = Ys;
     end
 run A_star.m     %find route
 
@@ -73,8 +73,6 @@ for i = 1:n
      break
  end
 end
-
-
 
 % clearvars -except pathout fullang
 % run controlKITT

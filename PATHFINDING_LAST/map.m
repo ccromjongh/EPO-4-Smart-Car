@@ -1,5 +1,5 @@
 clear FIELD
-r = 5;           %car radius [cm]
+r = 25;           %car radius [cm]
 
 %boundaries
 prompt = 'maximum x [cm] = ';
@@ -34,4 +34,4 @@ end
 %obstacle locations
 prompt = 'nr. of obstacles = ';
 n = input(prompt);
-FIELD = Obstacle(FIELD,r,n,res);
+[FIELD Obstacles] = Obstacle(FIELD,r,n,res);
