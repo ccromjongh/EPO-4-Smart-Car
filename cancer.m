@@ -136,7 +136,7 @@ while true
 
         % Set the steering direction
         current_dia = Diameter(2*idx - 1);
-        [steer_param, t] = Diameter2SteerDirection(current_dia);
+        [steer_param, t] = Diameter2SteerDirection(current_dia, idx);
         
         if (toc - prev_instruction > 2*t)
             fprintf('@t = %.2f: Calculated a diameter of %.2f m and a steering param of %d\n', ...
