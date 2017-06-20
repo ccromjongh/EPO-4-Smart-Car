@@ -1,11 +1,14 @@
 clear
 close all
-tic      %start timer
 res = 10;%resolution in cm
+
+ploton = 0;
 
 %% Make map
 run map.m        %read map
-MapPlot(FIELD);  %plot map
+if ploton == 1
+MapPlot(FIELD);  %plot map, obstacles
+end
 hold on
 
 %% A star 1 (Matlab)
@@ -34,24 +37,26 @@ optx = [ax; bx];
 opty = [ay; by];
 bx = optx;
 by = opty;
-% fitopt(Optimal_path,res,Xmax,Ymax);
 end
 
 %% Plot path 1
+if ploton == 1
 set(gca,'XTick',[0:100/(2*res):Xmax] );
 set(gca,'XTickLabel',[0:0.5:Xmax/(100/res)] );
 set(gca,'YTick',[0:100/(2*res):Ymax] );
 set(gca,'YTickLabel',[0:0.5:Ymax/(100/res)] );
 grid minor
-
+end
 %% A star 2 (C)
 cpath = AnglePoint(Optimal_path);
 n = length(cpath)-1;
 cpathx = cpath(:,1);
 cpathy = cpath(:,2);
-for i = 1:n
-    
-end
+% for i = 1:n
+    %run c pathfinding
+    %save path to newpathout
+    %pathout = [pathout; newpathout]
+% end
 
-
-t = toc;                                                    %end of timer
+% clearvars -except cpath
+% run controlKITT

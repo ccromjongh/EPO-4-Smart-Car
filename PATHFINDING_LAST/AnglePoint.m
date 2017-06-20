@@ -1,6 +1,8 @@
-function [cpath] = AnglePoint(Optimal_path)
+function [c_sorted] = AnglePoint(Optimal_path)
 path = flipud(Optimal_path);
 n = length(path);
+
+%% get points
 for i = 1:n-4
     p1 = path(i+2,:);                               %getpoints
     p3 = path(i+4,:);
@@ -28,6 +30,7 @@ for i = 1:n-4
     end
     
 end
+%% make the path
 cpath = [];
 for j = 1:length(path)-4
     if abs(angleout(j)) > 0 && abs(angleout(j)) < 45
@@ -41,3 +44,15 @@ for i = 2:length(cpath)
         cpath(i,:) = [];
     end
 end
+
+%% index die shit
+c_sorted = zeros(length(path),2);
+for j = 1:length(cpath)
+    for i = 1:length(path)
+        if isequal(path(i,:), cpath(j,:)) == 1
+            c_sorted(i,:) = cpath(j,:);
+        end
+    end
+end
+
+c_sorted( all(~c_sorted,2), : ) = [];
