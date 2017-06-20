@@ -67,9 +67,11 @@ classdef testClass<handle
         function obj = setSteerDirection (obj, direction)
             direction = int16(direction);                           % Make sure value is integer
             if (direction < -50)
-                error('Speed too low. %d < -50', direction);        % Value too low
+                direction = -50;
+                %error('Speed too low. %d < -50', direction);        % Value too low
             elseif (direction > 50)
-                error('Speed too high. %d > 50', direction);        % Value too high
+                direction = 50;
+                %error('Speed too high. %d > 50', direction);        % Value too high
             end
             obj.direction = direction;
             direction = direction + 150;

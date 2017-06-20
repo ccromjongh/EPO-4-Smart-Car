@@ -39,13 +39,13 @@ while true
         %f = parfeval(p, @RecordLive, 2, false, 5, false); % Square size determined by idx
     %end
     % Collect the results as they become available.
-    magicResults = cell(1,length(ang_nav));
+    
     KITT.setMotorSpeed(22);
     for idx = 1:(length(ang_nav)/2)
         tic;
         % fetchNext blocks until next results are available.
         %[completedIdx,Hdist,Fs] = fetchOutputs(f);
-        [Hdist,Fs] = RecordLive(false, 5, false);
+        [Hdist,Fs] = RecordLive(true, 5, false);
         % When new location is available plot it
         if Hdist
             [x, y, z] =  tdoa2([field_data.mics.x; field_data.mics.y; field_data.mics.z ]', Hdist, Fs);
