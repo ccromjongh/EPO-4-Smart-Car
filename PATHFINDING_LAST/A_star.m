@@ -1,4 +1,4 @@
-%OPEN: 1:X|2:Y|3:xpar|4:ypar|5:H|6:G|7:F|
+%OPEN: 1:X|2:Y|3:xpar|4:ypar|5:H|6:G|7:F|8:on/off
 %closed count = cc
 %open count = c
 %exp count = ce
@@ -33,15 +33,15 @@ Ystart = Ys;
 
 path=0;
 goal_distance=dist(xnode,ynode,xt,yt);
-OPEN(c,:)= NewOpen(xnode,ynode,orx,ory,path,goal_distance,goal_distance);
+OPEN(c,:)= NewOpen(xnode,ynode,xnode,ynode,path,goal_distance,goal_distance);
 OPEN(c,8)=0;
 cc=cc+1;
 CLOSED(cc,1)=xnode;
 CLOSED(cc,2)=ynode;
 NoPath=1;
 
-xparent = orx;
-yparent = orx;
+xparent = xnode;
+yparent = ynode;
 
 %% A* algorithm
 flag = 0;
@@ -50,7 +50,7 @@ while (xnode ~= xt || ynode ~= yt) && (flag == 0)
     ce = size(exp,1);
     trig = 0;
     for i=1:ce
-            trig = 0;
+        trig = 0;
         for j=1:c
             if(exp(i,1) == OPEN(j,1) && exp(i,2) == OPEN(j,2) )
                 OPEN(j,7)=min(OPEN(j,7),exp(i,5));
@@ -70,7 +70,7 @@ while (xnode ~= xt || ynode ~= yt) && (flag == 0)
             OPEN(c,:) = NewOpen(exp(i,1),exp(i,2),xnode,ynode,exp(i,3),exp(i,4),exp(i,5));
         end;                                                                   %insert new element into the OPEN list
     end
-    [imin ans]= NewNode(OPEN,c,xt,yt);
+    [imin]= NewNode(OPEN,c,xt,yt);
     if (imin ~= -1)
         xnode=OPEN(imin,1);
         ynode=OPEN(imin,2);
@@ -120,20 +120,21 @@ if ( (Xs == xt) && (Ys == yt))
     Optimal_path(i,2) = yp;
     
     j=size(Optimal_path,1);
-    %       Plot the Optimal Path!
-    p=plot(Optimal_path(j,1),Optimal_path(j,2),'bo');
-    j=j-1;
-    for i=j:-1:1
-%         pause(.25);
-        set(p,'XData',Optimal_path(i,1),'YData',Optimal_path(i,2));
-        drawnow ;
-    end;
-    plot(Optimal_path(:,1),Optimal_path(:,2));
-    xlim([0.5 Xmax+0.5]);
-    ylim([0.5 Ymax+0.5]);
-    grid on;
-    
-    set(gca,'Ydir','normal')
+    %%       Plot the Optimal Path!
+    if ploton == 1
+        p=plot(Optimal_path(j,1),Optimal_path(j,2),'bo');
+        j=j-1;
+        for i=j:-1:1
+            set(p,'XData',Optimal_path(i,1),'YData',Optimal_path(i,2));
+            drawnow ;
+        end;
+        plot(Optimal_path(:,1),Optimal_path(:,2));
+        xlim([0.5 Xmax+0.5]);
+        ylim([0.5 Ymax+0.5]);
+        grid on;
+        
+        set(gca,'Ydir','normal')
+    end
 else
     pause(1);
     h=msgbox('Sorry, No path exists to the Target!','warn');
