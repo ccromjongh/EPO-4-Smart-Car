@@ -1,7 +1,7 @@
-global perimeter location loc_index demo_record demo_drive Trec Tbeacon x_nav y_nav processing_timer;
+global perimeter location field_data loc_index demo_record demo_drive Trec Tbeacon x_nav y_nav processing_timer Fs;
 
 demo_record = true;
-demo_drive = true;
+demo_drive = false;
 
 %% Setup
 JSON = fileread('field_K.json');
@@ -14,7 +14,7 @@ KITT = testClass;
 
 if (~demo_drive)
     % Open port
-    KITT.openPort('COM3');
+    %KITT.openPort('COM3');
 
     % Setup the beacon
     load audiodata_96k2.mat;
@@ -26,13 +26,14 @@ r1 = 0.1;
 %p = gcp();
 
 % Set start and end location
-start_location = [2 -1];
-start_angle = -pi/2;
-final_location = [-2 2];
+start_location = [1.52 -2.275];
+start_angle = pi/2;
+final_location = [-1.525 1.275];
 
 % Plot the field
 distance = zeros(1,5);
 mic = 1:5;
+nchan = 5;
 playfield_plot(distance, mic, 100*start_location(1), 100*start_location(2), field_data);
 
 perimeter = [field_data.field.x_min,field_data.field.x_max,field_data.field.y_min,field_data.field.y_max]/100;
@@ -66,9 +67,9 @@ while true
     radius_arr(radius_arr > 1E6) = 0;
     Diameter = 2*radius_arr;
     
-    printInstructionMessage('Set motorspeed to 26\n');
+    printInstructionMessage('Set motorspeed to 23\n');
     if (~demo_drive)
-        KITT.setMotorSpeed(26);
+        KITT.setMotorSpeed(23);
     end
     
     idx = 1;
@@ -76,7 +77,7 @@ while true
     
     while true
         if (status.rec_started_t < 0)
-            printRecordMessage(sprintf('Start recording n. %d\n', status.record_index));
+            %printRecordMessage(sprintf('Start recording n. %d\n', status.record_index));
             status.record_index = status.record_index + 1;
             [page, Trec, Tbeacon] = start_cancer_recording(demo_record, KITT);
             status.rec_started_t = toc;
@@ -92,7 +93,22 @@ while true
             end
         end
         
-        status = endOfRecord(status, idx);
+        [status, new_data] = endOfRecord(page, nchan, status, idx);
+        
+        %{
+        if (new_data)
+            [estimation, theta] = last_location(location, loc_index, toc - processing_timer.end);
+            %theta = (theta + ang_nav(idx)) / 2;
+            [x_nav, y_nav, ang_nav, success] = main(estimation, theta, final_location, perimeter);
+            idx = 1;
+            
+            % Find array of radii from angles given by the navigator
+            radius_arr = 0.5 * r1 * tan(0.5 * (pi - ang_nav));
+            % Filter out infinite measurements
+            radius_arr(radius_arr > 1E6) = 0;
+            Diameter = 2*radius_arr;
+        end
+        %}
 
         % Set the steering direction
         current_dia = Diameter(idx);
@@ -128,7 +144,7 @@ while true
     end
     
     while (status.rec_started_t >= 0)
-        status = endOfRecord(status, idx);
+        status = endOfRecord(page, nchan, status, idx);
     end
     
     % If within 30 cm of final location, break & brake
@@ -148,6 +164,8 @@ end
 if (~demo_drive)
    KITT.closePort(); 
 end
+
+        %%          Functions           %%
 
 function rad = coord_radius (arr1, arr2)
     x = arr1(1) - arr2(1);
@@ -178,19 +196,24 @@ function plot_route(x_nav, y_nav, start_location, final_location)
     ylabel('Y axis (m)');
 end
 
-function status = endOfRecord(status, idx)
+% Process record function
+function [status, new_data] = endOfRecord(page, nchan, status, idx)
 
-    global perimeter location loc_index demo_record Trec x_nav y_nav processing_timer;
-    do = false;
+    global field_data location loc_index demo_record Trec x_nav y_nav processing_timer Fs;
+    new_data = false;
 
     if (~demo_record)
         if((status.rec_started_t >= 0) && playrec('isFinished'))
             processing_timer.start = toc;
             printRecordMessage(sprintf('Processing recording n. %d\n', status.record_index-1));
-            Hdist = process_cancer_recording(page, nchan);
-            [x, y, z] =  tdoa2(100*perimeter', Hdist, Fs);
+            Hdist = process_cancer_recording(page, nchan, Fs);
+            [x, y, z] =  tdoa2([field_data.mics.x; field_data.mics.y; field_data.mics.z]', Hdist, Fs);
             
-            do = true;
+            x = x/100;
+            y = y/100;
+            z = z/100;
+            
+            new_data = true;
         end
     else
         if ((status.rec_started_t >= 0) && (toc - status.rec_started_t > Trec))
@@ -198,13 +221,13 @@ function status = endOfRecord(status, idx)
             x = x_nav(idx);
             y = y_nav(idx);
             z = 0;
-            pause(0.1);
+            %pause(0.05);
             
-            do = true;
+            new_data = true;
         end
     end
     
-    if (do)
+    if (new_data)
         fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
 
         loc_index = loc_index + 1;
@@ -223,6 +246,8 @@ function status = endOfRecord(status, idx)
         %}
     end
 end
+
+
 
 function string = timeString()
     string = sprintf('@t = %.2f: ', toc);

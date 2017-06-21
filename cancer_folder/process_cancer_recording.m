@@ -1,4 +1,6 @@
-function Hdist = process_cancer_recording (page, nchan)
+function Hdist = process_cancer_recording (page, nchan, Fs)
+    latency = 0.05;
+    
     if (page)
         % Get data
         recorded = get_record(page);
