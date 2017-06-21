@@ -15,13 +15,13 @@ using namespace std;
     #define M_PI_4 (M_PI/4)
 #endif
 
-#define RADIUS 0.10
+#define RADIUS 0.20
 #define TWO_PI (2*M_PI)
-#define END_TOLLERANCE 0.1
+#define END_TOLLERANCE 0.2
 #define END_ANGLE_TOLLERANCE (M_PI_4/2)    // 45/2 = 22.5 deg
 #define ENFORCE_ANGLE false
 //#define ANGLE_LIMIT (M_PI_4/6)             // 45/6 = 7.5 deg
-#define ANGLE_LIMIT 0.1210640396             // minimum diameter of 1.65 meter
+#define ANGLE_LIMIT 0.2412473372             // minimum diameter of 1.65 meter
 #define ANGLE_DIVISIONS 4
 
 #define RADIUS_MULTIPLIER 100
@@ -537,11 +537,11 @@ void printRoute(PathNode *destination) {
 
 PathNode *backtrace (PathNode *destination, size_t *pathLength = nullptr)
 {
-    printf("Do I even reach this point?\n");
-	size_t nNodes = 0;
+    //printf("Do I even reach this point?\n");
+	size_t nNodes = 1;
     Node *ptr = destination->mapNode;
     PathNode *list = new PathNode(ptr);
-    printf("This is fine\n");
+    //printf("This is fine\n");
 
     // Trace to parent, and add it before the current item in the list
     while ((ptr = ptr->parent) != NULL)
@@ -552,7 +552,7 @@ PathNode *backtrace (PathNode *destination, size_t *pathLength = nullptr)
 		nNodes++;
     }
 
-    printf("We still good?\n");
+    //printf("We still good?\n");
 
 	if (pathLength) {
 		*pathLength = nNodes;
@@ -598,7 +598,7 @@ int main() {
  *  nrhs    Number of input variables                           nargin
  *  prhs    Array of mxArray pointers to the input variables    varargin
  *
- *  MATLAB syntax: [x_arr, y_arr, ang_arr, success] = main([start_x, start_y], start_angle, [end_x, end_y], [field_x_min field_x_max field_y_min field_y_max], obstacles)
+ *  MATLAB syntax: [x_arr, y_arr, ang_arr, success, abs_arr] = main([start_x, start_y], start_angle, [end_x, end_y], [field_x_min field_x_max field_y_min field_y_max], obstacles)
  *
  **/
 
@@ -616,7 +616,7 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
         mexErrMsgTxt("You are missing some input arguments.");
     } else if (nrhs > 5) {
         mexErrMsgTxt("You have too many input arguments.");
-    } else if (nlhs > 4) {
+    } else if (nlhs > 5) {
         mexErrMsgTxt("Too many output arguments.");
     }
 
@@ -723,12 +723,14 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
         phls[1] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
         phls[2] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
         phls[3] = mxCreateDoubleScalar(1);
+        phls[4] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
 
         printf("Matrices created\n");
 
         double *x_mat = mxGetPr(phls[0]);
         double *y_mat = mxGetPr(phls[1]);
         double *ang_mat = mxGetPr(phls[2]);
+        double *abs_mat = mxGetPr(phls[4]);
 
         PathNode *ptr = path_list;
 
@@ -738,6 +740,7 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
             x_mat[i] = ptr->mapNode->x;
             y_mat[i] = ptr->mapNode->y;
             ang_mat[i] = ptr->mapNode->get_rel_angle();
+            abs_mat[i] = ptr->mapNode->get_abs_angle();
             ptr = ptr->next;
         }
 
@@ -749,10 +752,12 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
         phls[1] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
         phls[2] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
         phls[3] = mxCreateDoubleScalar(0);
+        phls[4] = mxCreateDoubleMatrix(1, nNodes, mxREAL);
 
         double *x_mat = mxGetPr(phls[0]);
         double *y_mat = mxGetPr(phls[1]);
         double *ang_mat = mxGetPr(phls[2]);
+        double *abs_mat = mxGetPr(phls[4]);
 
         /*x_mat[0] = 0.0;
         y_mat[0] = 0.0;
@@ -762,6 +767,7 @@ void mexFunction(int nlhs, mxArray *phls[], int nrhs, const mxArray *prhs[]) {
             x_mat[i] = closed_list[i]->x;
             y_mat[i] = closed_list[i]->y;
             ang_mat[i] = closed_list[i]->get_rel_angle();
+            abs_mat[i] = closed_list[i]->get_abs_angle();
         }
 
         /*for (vector<Node *>::iterator it = closed_list.begin() ; it != closed_list.end(); ++it)

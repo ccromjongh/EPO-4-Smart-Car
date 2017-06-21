@@ -1,6 +1,6 @@
-r1 = 0.10;  % Meter per segement
+r1 = 0.20;  % Meter per segement
 r2 = 0.40;  % Meter to stay away from obstacles
-dy = -0.6;
+dy = -0.4;
 %dy = 0;
 
 start_x = -0.235;

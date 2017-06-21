@@ -1,12 +1,15 @@
-global perimeter location field_data loc_index demo_record demo_drive Trec Tbeacon x_nav y_nav processing_timer Fs;
+global perimeter location field_data loc_index demo_record demo_drive Trec Tbeacon x_nav y_nav processing_timer Fs log_file;
 
 demo_record = true;
-demo_drive = false;
+demo_drive = true;
 
 %% Setup
 JSON = fileread('field_K.json');
 field_data = jsondecode(JSON);
 clear JSON;
+
+%delete('log.txt');
+log_file = fopen('log.txt', 'w');
 
 close all;
 
@@ -22,8 +25,8 @@ if (~demo_drive)
 end
 if (~demo_record); initialise_audio_box(Fs, true); end
 
-r1 = 0.1;
-%p = gcp();
+r1 = 0.2;   % Vertex length
+%p = gcp();  % Parrallel pool
 
 % Set start and end location
 start_location = [1.52 -2.275];
@@ -43,21 +46,20 @@ loc_index = 1;
 location = zeros(1000, 2);
 location(loc_index, :) = start_location;
 
-idx_increment = 2;
-
 status = struct('prev_instr_t', 0.0, 'rec_started_t', -1.0, 'beacon', false, 'record_index', 1, 'last_instruction', false);
 processing_timer = struct('start', 0, 'end', 0, 'time', []);
+instruction_timer = [];
 
 %% Control loop
 
 tic;
-printImportantMessage('Starting control loop\n');
+printImportantMessage('Starting control loop\n', log_file);
 
 while true
 	% Initial path
-    [x_nav, y_nav, ang_nav, success] = main(location(loc_index, :), start_angle, final_location, perimeter);
+    [x_nav, y_nav, ang_nav, success, abs_ang_nav] = main(location(loc_index, :), start_angle, final_location, perimeter);
     nav_steps = length(ang_nav);
-    fprintf('@t = %.2f: Path found, proceding to controlling KITT\n', toc);
+    printLogMessage('Path found, proceding to controlling KITT\n', log_file);
     
     plot_route(x_nav, y_nav, location(loc_index, :), final_location);
 
@@ -67,7 +69,7 @@ while true
     radius_arr(radius_arr > 1E6) = 0;
     Diameter = 2*radius_arr;
     
-    printInstructionMessage('Set motorspeed to 23\n');
+    printInstructionMessage('Set motorspeed to 23\n', log_file);
     if (~demo_drive)
         KITT.setMotorSpeed(23);
     end
@@ -77,16 +79,16 @@ while true
     
     while true
         if (status.rec_started_t < 0)
-            %printRecordMessage(sprintf('Start recording n. %d\n', status.record_index));
+            printRecordMessage(sprintf('Start recording n. %d\n', status.record_index), log_file, true);
             status.record_index = status.record_index + 1;
             [page, Trec, Tbeacon] = start_cancer_recording(demo_record, KITT);
             status.rec_started_t = toc;
-            %printBeaconMessage('Beacon turned on\n');
+            %printBeaconMessage('Beacon turned on\n', log_file);
             status.beacon = true;
         end
         
         if (status.beacon && toc - status.rec_started_t > Tbeacon)
-            %printBeaconMessage('Beacon turned off\n');
+            %printBeaconMessage('Beacon turned off\n', log_file);
             status.beacon = false;
             if (~demo_drive)
                 KITT.toggleBeacon(false);
@@ -98,7 +100,7 @@ while true
         %{
         if (new_data)
             [estimation, theta] = last_location(location, loc_index, toc - processing_timer.end);
-            %theta = (theta + ang_nav(idx)) / 2;
+            theta = (theta + abs_ang_nav(idx)) / 2;
             [x_nav, y_nav, ang_nav, success] = main(estimation, theta, final_location, perimeter);
             idx = 1;
             
@@ -114,28 +116,25 @@ while true
         current_dia = Diameter(idx);
         [steer_param, t] = Diameter2SteerDirection(current_dia, idx);
         
-        if (toc - status.prev_instr_t > idx_increment*t)
+        if (toc - status.prev_instr_t > t)
             printInstructionMessage(sprintf('Instruction %d\tCalculated diameter: %.2f m\tSteering param: %d\n', ...
-                        idx, current_dia, round(steer_param)));
+                        idx, current_dia, round(steer_param)), log_file);
             if (~demo_drive)
                 KITT.setSteerDirection(steer_param);
             end
+            
+            instruction_timer(end+1) = toc; %#ok<SAGROW>
+            
             if (idx == nav_steps)
                 if (status.last_instruction)
                     break;
                 else
                     status.last_instruction = true;
-                    idx_increment = 1;
                 end
             else
-                if (idx + 1 == nav_steps)
-                    idx_increment = 1;
-                else
-                    idx_increment = 2;
-                end
-                idx = idx + idx_increment;
+                idx = idx + 1;
             end
-            status.prev_instr_t = status.prev_instr_t + idx_increment*t;
+            status.prev_instr_t = status.prev_instr_t + t;
         end
     end
     
@@ -149,15 +148,15 @@ while true
     
     % If within 30 cm of final location, break & brake
     final_radius = coord_radius(final_location, location(loc_index,:));
-    printImportantMessage(sprintf('Final radius is %.2f\n', final_radius));
+    printImportantMessage(sprintf('Final radius is %.2f\n', final_radius), log_file);
     if (final_radius < 0.3)
         if (~demo_drive)
             KITT.setMotorSpeed(15);
         end
-        fprintf('YEAH Arrived at the destination\n\n');
+        printLogMessage('YEAH Arrived at the destination\n\n', log_file);
         break; 
     else
-        fprintf('Almost there I have to retry\n\n');
+        printLogMessage('Almost there I have to retry\n\n', log_file);
     end
 end
 
@@ -165,13 +164,14 @@ if (~demo_drive)
    KITT.closePort(); 
 end
 
+fclose(log_file);
+
+
+
         %%          Functions           %%
 
 function rad = coord_radius (arr1, arr2)
-    x = arr1(1) - arr2(1);
-    y = arr1(2) - arr2(2);
-    rad = sqrt(x^2 + y^2);
-    
+    rad = sqrt(sum((arr1 - arr2).^2));
 end
 
 function plot_route(x_nav, y_nav, start_location, final_location)
@@ -199,13 +199,13 @@ end
 % Process record function
 function [status, new_data] = endOfRecord(page, nchan, status, idx)
 
-    global field_data location loc_index demo_record Trec x_nav y_nav processing_timer Fs;
+    global field_data location loc_index demo_record Trec x_nav y_nav processing_timer Fs log_file;
     new_data = false;
 
     if (~demo_record)
         if((status.rec_started_t >= 0) && playrec('isFinished'))
             processing_timer.start = toc;
-            printRecordMessage(sprintf('Processing recording n. %d\n', status.record_index-1));
+            printRecordMessage(sprintf('Processing recording n. %d\n', status.record_index-1), log_file, true);
             Hdist = process_cancer_recording(page, nchan, Fs);
             [x, y, z] =  tdoa2([field_data.mics.x; field_data.mics.y; field_data.mics.z]', Hdist, Fs);
             
@@ -228,7 +228,7 @@ function [status, new_data] = endOfRecord(page, nchan, status, idx)
     end
     
     if (new_data)
-        fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
+        printLogMessage(sprintf('Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', x, y, z), log_file);
 
         loc_index = loc_index + 1;
         location(loc_index, :) = [x, y];
@@ -253,19 +253,30 @@ function string = timeString()
     string = sprintf('@t = %.2f: ', toc);
 end
 
-function printBeaconMessage(message)
+function printBeaconMessage(message, log_file)
     cprintf('yellow', [timeString() message]);
+    fprintf(log_file, [timeString() message]);
 end
 
-function printRecordMessage(message)
-    cprintf('red', [timeString() message]);
+function printRecordMessage(message, log_file, to_terminal)
+    if (nargin <3); to_terminal = true; end
+    if (to_terminal)
+        cprintf('red', [timeString() message]);
+    end
+    fprintf(log_file, [timeString() message]);
 end
 
-function printInstructionMessage(message)
+function printInstructionMessage(message, log_file)
     cprintf('key', [timeString() message]);
+    fprintf(log_file, [timeString() message]);
 end
 
-function printImportantMessage(message)
-    disp(' ');
-    cprintf('*green', [timeString() message]);
+function printImportantMessage(message, log_file)
+    cprintf('*green', ['\n' timeString() message]);
+    fprintf(log_file, ['\n' timeString() message]);
+end
+
+function printLogMessage(message, log_file)
+    fprintf([timeString() message]);
+    fprintf(log_file, [timeString() message]);
 end
