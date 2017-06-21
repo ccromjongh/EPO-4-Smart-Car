@@ -1,4 +1,4 @@
-global perimeter location loc_index demo_record demo_drive;
+global perimeter location loc_index demo_record demo_drive Trec Tbeacon x_nav y_nav;
 
 demo_record = true;
 demo_drive = true;
@@ -52,8 +52,8 @@ idx_increment = 2;
 
 %% Control loop
 
-fprintf('@t = 0.00: Starting control loop\n');
 tic;
+printImportantMessage('Starting control loop\n');
 
 while true
 	% Initial path
@@ -69,7 +69,7 @@ while true
     radius_arr(radius_arr > 1E6) = 0;
     Diameter = 2*radius_arr;
     
-    fprintf('@t = %.2f: Set motorspeed to 26\n', toc);
+    printInstructionMessage('Set motorspeed to 26\n');
     if (~demo_drive)
         KITT.setMotorSpeed(26);
     end
@@ -79,32 +79,32 @@ while true
     
     while true
         if (~record_started)
-            printRecordMessage(sprintf('@t = %.2f: Start recording n. %d\n', toc, record_index));
+            printRecordMessage(sprintf('Start recording n. %d\n', record_index));
             record_index = record_index + 1;
             [page, Trec, Tbeacon] = start_cancer_recording(demo_record, KITT);
             start_rec = toc;
-            printBeaconMessage('Beacon turned on\n');
+            %printBeaconMessage('Beacon turned on\n');
             record_started = true;
             beacon_on = true;
         end
         
         if (beacon_on && toc - start_rec > Tbeacon)
-            printBeaconMessage('Beacon turned off\n');
+            %printBeaconMessage('Beacon turned off\n');
             beacon_on = false;
             if (~demo_drive)
                 KITT.toggleBeacon(false);
             end
         end
         
-        record_started = endOfRecord(record_started);
+        record_started = endOfRecord(record_started, start_rec, idx);
 
         % Set the steering direction
         current_dia = Diameter(idx);
         [steer_param, t] = Diameter2SteerDirection(current_dia, idx);
         
         if (toc - prev_instruction > idx_increment*t)
-            fprintf('@t = %.2f: Calculated a diameter of %.2f m and a steering param of %d\n', ...
-                        toc, current_dia, round(steer_param));
+            printInstructionMessage(sprintf('Instruction %d\tCalculated diameter: %.2f m\tSteering param: %d\n', ...
+                        idx, current_dia, round(steer_param)));
             if (~demo_drive)
                 KITT.setSteerDirection(steer_param);
             end
@@ -132,7 +132,7 @@ while true
     end
     
     while (record_started)
-        record_started = endOfRecord(record_started);
+        record_started = endOfRecord(record_started, start_rec, idx);
     end
     
     % If within 30 cm of final location, break & brake
@@ -182,9 +182,9 @@ function plot_route(x_nav, y_nav, start_location, final_location)
     ylabel('Y axis (m)');
 end
 
-function [record_started] = endOfRecord(record_started)
+function [record_started] = endOfRecord(record_started, start_rec, idx)
 
-global perimeter location loc_index demo_record;
+global perimeter location loc_index demo_record Trec x_nav y_nav;
 
     if (~demo_record)
         if(record_started && playrec('isFinished'))
@@ -194,8 +194,8 @@ global perimeter location loc_index demo_record;
             fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
             record_started = false;
 
-            location(loc_index, :) = [x, y];
             loc_index = loc_index + 1;
+            location(loc_index, :) = [x, y];
 
             %{
             hold on; p = plot(x, y, '.');
@@ -212,8 +212,8 @@ global perimeter location loc_index demo_record;
             y = y_nav(idx);
             z = 0;
 
-            location(loc_index, :) = [x, y];
             loc_index = loc_index + 1;
+            location(loc_index, :) = [x, y];
             fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
             record_started = false;
             pause(0.1);
@@ -231,6 +231,10 @@ end
 
 function printRecordMessage(message)
     cprintf('red', [timeString() message]);
+end
+
+function printInstructionMessage(message)
+    cprintf('key', [timeString() message]);
 end
 
 function printImportantMessage(message)

@@ -2,10 +2,11 @@ function [SteerDirection,Time] = Diameter2SteerDirection(Diameter, Index)
     % When the diameter is 0, just go straight. Infinity is not a very nice number
     if (Diameter == 0)
         SteerDirection = 6;
+        Index = Index * 0.5;
         if Index < 20
-            Time = 0.4725 *exp(-0.8086 *Index) + 0.1491*exp(-0.03418 *Index);
+            Time = 0.4725 *exp(-0.8086 * Index) + 0.1491*exp(-0.03418 * Index);
         else
-            Time = 0.75;
+            Time = 0.075;
         end
     % Negative diameter means steering right
     elseif (Diameter > 0)
