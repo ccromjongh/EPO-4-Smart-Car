@@ -41,14 +41,10 @@ perimeter = [field_data.field.x_min,field_data.field.x_max,field_data.field.y_mi
 loc_index = 1;
 location = zeros(1000, 2);
 location(loc_index, :) = start_location;
-record_started = false;
-record_index = 1;
 
-prev_instruction = 0;
-start_rec = 0;
-beacon_on = false;
-last_instruction = false;
 idx_increment = 2;
+
+status = struct('prev_instr_t', 0.0, 'rec_started_t', -1.0, 'beacon', false, 'record_index', 1, 'last_instruction', false);
 
 %% Control loop
 
@@ -75,48 +71,47 @@ while true
     end
     
     idx = 1;
-    last_instruction = false;
+    status.last_instruction = false;
     
     while true
-        if (~record_started)
-            printRecordMessage(sprintf('Start recording n. %d\n', record_index));
-            record_index = record_index + 1;
+        if (status.rec_started_t < 0)
+            printRecordMessage(sprintf('Start recording n. %d\n', status.record_index));
+            status.record_index = status.record_index + 1;
             [page, Trec, Tbeacon] = start_cancer_recording(demo_record, KITT);
-            start_rec = toc;
+            status.rec_started_t = toc;
             %printBeaconMessage('Beacon turned on\n');
-            record_started = true;
-            beacon_on = true;
+            status.beacon = true;
         end
         
-        if (beacon_on && toc - start_rec > Tbeacon)
+        if (status.beacon && toc - status.rec_started_t > Tbeacon)
             %printBeaconMessage('Beacon turned off\n');
-            beacon_on = false;
+            status.beacon = false;
             if (~demo_drive)
                 KITT.toggleBeacon(false);
             end
         end
         
-        record_started = endOfRecord(record_started, start_rec, idx);
+        status = endOfRecord(status, idx);
 
         % Set the steering direction
         current_dia = Diameter(idx);
         [steer_param, t] = Diameter2SteerDirection(current_dia, idx);
         
-        if (toc - prev_instruction > idx_increment*t)
+        if (toc - status.prev_instr_t > idx_increment*t)
             printInstructionMessage(sprintf('Instruction %d\tCalculated diameter: %.2f m\tSteering param: %d\n', ...
                         idx, current_dia, round(steer_param)));
             if (~demo_drive)
                 KITT.setSteerDirection(steer_param);
             end
             if (idx == nav_steps)
-                if (last_instruction)
+                if (status.last_instruction)
                     break;
                 else
-                    last_instruction = true;
-                    prev_instruction = toc;
+                    status.last_instruction = true;
+                    status.prev_instr_t = toc;
                 end
             else
-                prev_instruction = toc;
+                status.prev_instr_t = toc;
                 if (idx + 1 == nav_steps)
                     idx_increment = 1;
                 else
@@ -131,8 +126,8 @@ while true
         KITT.setMotorSpeed(0); pause(0.3); KITT.setMotorSpeed(15);
     end
     
-    while (record_started)
-        record_started = endOfRecord(record_started, start_rec, idx);
+    while (status.rec_started_t >= 0)
+        status = endOfRecord(status, idx);
     end
     
     % If within 30 cm of final location, break & brake
@@ -182,17 +177,17 @@ function plot_route(x_nav, y_nav, start_location, final_location)
     ylabel('Y axis (m)');
 end
 
-function [record_started] = endOfRecord(record_started, start_rec, idx)
+function status = endOfRecord(status, idx)
 
 global perimeter location loc_index demo_record Trec x_nav y_nav;
 
     if (~demo_record)
-        if(record_started && playrec('isFinished'))
-            printRecordMessage(sprintf('Processing recording n. %d\n', record_index-1));
+        if((status.rec_started_t >= 0) && playrec('isFinished'))
+            printRecordMessage(sprintf('Processing recording n. %d\n', status.record_index-1));
             Hdist = process_cancer_recording(page, nchan);
             [x, y, z] =  tdoa2(100*perimeter', Hdist, Fs);
             fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
-            record_started = false;
+            status.rec_started_t = -1;
 
             loc_index = loc_index + 1;
             location(loc_index, :) = [x, y];
@@ -207,7 +202,7 @@ global perimeter location loc_index demo_record Trec x_nav y_nav;
             %fprintf('Got result with index: %d.\n', completedIdx);
         end
     else
-        if (record_started && toc - start_rec > Trec)
+        if ((status.rec_started_t >= 0) && (toc - status.rec_started_t > Trec))
             x = x_nav(idx);
             y = y_nav(idx);
             z = 0;
@@ -215,7 +210,7 @@ global perimeter location loc_index demo_record Trec x_nav y_nav;
             loc_index = loc_index + 1;
             location(loc_index, :) = [x, y];
             fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
-            record_started = false;
+            status.rec_started_t = -1;
             pause(0.1);
         end
     end
