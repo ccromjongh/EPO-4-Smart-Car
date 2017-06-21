@@ -1,3 +1,5 @@
+global perimeter location loc_index demo_record demo_drive;
+
 demo_record = true;
 demo_drive = true;
 
@@ -5,6 +7,8 @@ demo_drive = true;
 JSON = fileread('field_K.json');
 field_data = jsondecode(JSON);
 clear JSON;
+
+close all;
 
 KITT = testClass;
 
@@ -43,6 +47,7 @@ record_index = 1;
 prev_instruction = 0;
 start_rec = 0;
 beacon_on = false;
+last_instruction = false;
 
 %% Control loop
 
@@ -51,11 +56,11 @@ tic;
 
 while true
 	% Initial path
-    [x_nav, y_nav, ang_nav] = main(location(loc_index,1), location(loc_index,2), start_angle, final_location(1), final_location(2));
-    nav_steps = round(length(ang_nav)/2);
+    [x_nav, y_nav, ang_nav, success] = main(location(loc_index, :), start_angle, final_location, perimeter);
+    nav_steps = ceil(length(ang_nav)/2);
     fprintf('@t = %.2f: Path found, proceding to controlling KITT\n', toc);
     
-    plot_route(x_nav, y_nav, location(:,1), final_location);
+    plot_route(x_nav, y_nav, location(loc_index, :), final_location);
 
     % Find array of radii from angles given by the navigator
     radius_arr = 0.5 * r1 * tan(0.5 * (pi - ang_nav));
@@ -69,56 +74,28 @@ while true
     end
     
     idx = 1;
+    last_instruction = false;
     
     while true
         if (~record_started)
-            fprintf('@t = %.2f: Start recording n. %d\n', toc, record_index);
+            printRecordMessage(sprintf('@t = %.2f: Start recording n. %d\n', toc, record_index));
             record_index = record_index + 1;
             [page, Trec, Tbeacon] = start_cancer_recording(demo_record, KITT);
             start_rec = toc;
-            fprintf('@t = %.2f: Beacon turned on\n', toc);
+            printBeaconMessage('Beacon turned on\n');
             record_started = true;
             beacon_on = true;
         end
         
         if (beacon_on && toc - start_rec > Tbeacon)
-            fprintf('@t = %.2f: Beacon turned off\n', toc);
+            printBeaconMessage('Beacon turned off\n');
             beacon_on = false;
             if (~demo_drive)
                 KITT.toggleBeacon(false);
             end
         end
         
-        if (~demo_record)
-            if(playrec('isFinished'))
-                fprintf('@t = %.2f: Processing recording n. %d\n', toc, record_index-1);
-                Hdist = process_cancer_recording(page, nchan);
-                [x, y, z] =  tdoa2([field_data.mics.x; field_data.mics.y; field_data.mics.z ]', Hdist, Fs);
-                fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
-                record_started = false;
-
-                location(loc_index, :) = [x, y];
-
-                %{
-                hold on; p = plot(x, y, '.');
-                p.LineWidth = 2;
-                p.MarkerSize = 14;
-                p.MarkerFaceColor = 'white'; 
-                hold off;
-                %}
-                %fprintf('Got result with index: %d.\n', completedIdx);
-            end
-        else
-            if (record_started && toc - start_rec > Trec)
-                x = x_nav(idx*2-1);
-                y = y_nav(idx*2-1);
-                z = 0;
-                
-                location(loc_index, :) = [x, y];
-                fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
-                record_started = false;
-            end
-        end
+        record_started = endOfRecord(record_started);
 
         % Set the steering direction
         current_dia = Diameter(2*idx - 1);
@@ -127,21 +104,34 @@ while true
         if (toc - prev_instruction > 2*t)
             fprintf('@t = %.2f: Calculated a diameter of %.2f m and a steering param of %d\n', ...
                         toc, current_dia, round(steer_param));
-            prev_instruction = toc;
             if (~demo_drive)
                 KITT.setSteerDirection(steer_param);
             end
-            idx = idx + 1;
-            if (idx == nav_steps); break; end
+            if (idx == nav_steps)
+                if (last_instruction)
+                    break;
+                else
+                    last_instruction = true;
+                    prev_instruction = toc;
+                end
+            else
+                prev_instruction = toc;
+                idx = idx + 1;
+            end
         end
     end
     
     if (~demo_drive)
         KITT.setMotorSpeed(0); pause(0.3); KITT.setMotorSpeed(15);
     end
+    
+    while (record_started)
+        record_started = endOfRecord(record_started);
+    end
+    
     % If within 30 cm of final location, break & brake
     final_radius = coord_radius(final_location, location(loc_index,:));
-    fprintf('\n@t = %.2f: Final radius is %.2f\n', toc, final_radius);
+    printImportantMessage(sprintf('Final radius is %.2f\n', final_radius));
     if (final_radius < 0.3)
         if (~demo_drive)
             KITT.setMotorSpeed(15);
@@ -165,6 +155,8 @@ function rad = coord_radius (arr1, arr2)
 end
 
 function plot_route(x_nav, y_nav, start_location, final_location)
+    global perimeter;
+    
     figure();
     hold off;
     plot(x_nav, y_nav);
@@ -182,4 +174,60 @@ function plot_route(x_nav, y_nav, start_location, final_location)
     title('KITT navigation using vertex pathfinding');
     xlabel('X axis (m)');
     ylabel('Y axis (m)');
+end
+
+function [record_started] = endOfRecord(record_started)
+
+global perimeter location loc_index demo_record;
+
+    if (~demo_record)
+        if(record_started && playrec('isFinished'))
+            printRecordMessage(sprintf('Processing recording n. %d\n', record_index-1));
+            Hdist = process_cancer_recording(page, nchan);
+            [x, y, z] =  tdoa2(100*perimeter', Hdist, Fs);
+            fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
+            record_started = false;
+
+            location(loc_index, :) = [x, y];
+            loc_index = loc_index + 1;
+
+            %{
+            hold on; p = plot(x, y, '.');
+            p.LineWidth = 2;
+            p.MarkerSize = 14;
+            p.MarkerFaceColor = 'white'; 
+            hold off;
+            %}
+            %fprintf('Got result with index: %d.\n', completedIdx);
+        end
+    else
+        if (record_started && toc - start_rec > Trec)
+            x = x_nav(idx*2-1);
+            y = y_nav(idx*2-1);
+            z = 0;
+
+            location(loc_index, :) = [x, y];
+            loc_index = loc_index + 1;
+            fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
+            record_started = false;
+            pause(0.1);
+        end
+    end
+end
+
+function string = timeString()
+    string = sprintf('@t = %.2f: ', toc);
+end
+
+function printBeaconMessage(message)
+    cprintf('yellow', [timeString() message]);
+end
+
+function printRecordMessage(message)
+    cprintf('red', [timeString() message]);
+end
+
+function printImportantMessage(message)
+    disp(' ');
+    cprintf('*green', [timeString() message]);
 end
