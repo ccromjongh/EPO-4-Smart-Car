@@ -1,4 +1,4 @@
-global perimeter location loc_index demo_record demo_drive Trec Tbeacon x_nav y_nav;
+global perimeter location loc_index demo_record demo_drive Trec Tbeacon x_nav y_nav processing_timer;
 
 demo_record = true;
 demo_drive = true;
@@ -45,6 +45,7 @@ location(loc_index, :) = start_location;
 idx_increment = 2;
 
 status = struct('prev_instr_t', 0.0, 'rec_started_t', -1.0, 'beacon', false, 'record_index', 1, 'last_instruction', false);
+processing_timer = struct('start', 0, 'end', 0, 'time', []);
 
 %% Control loop
 
@@ -179,40 +180,47 @@ end
 
 function status = endOfRecord(status, idx)
 
-global perimeter location loc_index demo_record Trec x_nav y_nav;
+    global perimeter location loc_index demo_record Trec x_nav y_nav processing_timer;
+    do = false;
 
     if (~demo_record)
         if((status.rec_started_t >= 0) && playrec('isFinished'))
+            processing_timer.start = toc;
             printRecordMessage(sprintf('Processing recording n. %d\n', status.record_index-1));
             Hdist = process_cancer_recording(page, nchan);
             [x, y, z] =  tdoa2(100*perimeter', Hdist, Fs);
-            fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
-            status.rec_started_t = -1;
-
-            loc_index = loc_index + 1;
-            location(loc_index, :) = [x, y];
-
-            %{
-            hold on; p = plot(x, y, '.');
-            p.LineWidth = 2;
-            p.MarkerSize = 14;
-            p.MarkerFaceColor = 'white'; 
-            hold off;
-            %}
-            %fprintf('Got result with index: %d.\n', completedIdx);
+            
+            do = true;
         end
     else
         if ((status.rec_started_t >= 0) && (toc - status.rec_started_t > Trec))
+            processing_timer.start = toc;
             x = x_nav(idx);
             y = y_nav(idx);
             z = 0;
-
-            loc_index = loc_index + 1;
-            location(loc_index, :) = [x, y];
-            fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
-            status.rec_started_t = -1;
             pause(0.1);
+            
+            do = true;
         end
+    end
+    
+    if (do)
+        fprintf('@t = %.2f: Location should be x: %.2f\ty: %.2f\tz: %.2f meter\n', toc, x, y, z);
+
+        loc_index = loc_index + 1;
+        location(loc_index, :) = [x, y];
+        status.rec_started_t = -1;
+        processing_timer.end = toc;
+        
+        processing_timer.time(end+1) = processing_timer.end - processing_timer.start;
+        
+        %{
+        hold on; p = plot(x, y, '.');
+        p.LineWidth = 2;
+        p.MarkerSize = 14;
+        p.MarkerFaceColor = 'white'; 
+        hold off;
+        %}
     end
 end
 
