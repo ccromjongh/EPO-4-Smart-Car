@@ -48,6 +48,7 @@ prev_instruction = 0;
 start_rec = 0;
 beacon_on = false;
 last_instruction = false;
+idx_increment = 2;
 
 %% Control loop
 
@@ -57,7 +58,7 @@ tic;
 while true
 	% Initial path
     [x_nav, y_nav, ang_nav, success] = main(location(loc_index, :), start_angle, final_location, perimeter);
-    nav_steps = ceil(length(ang_nav)/2);
+    nav_steps = length(ang_nav);
     fprintf('@t = %.2f: Path found, proceding to controlling KITT\n', toc);
     
     plot_route(x_nav, y_nav, location(loc_index, :), final_location);
@@ -98,10 +99,10 @@ while true
         record_started = endOfRecord(record_started);
 
         % Set the steering direction
-        current_dia = Diameter(2*idx - 1);
+        current_dia = Diameter(idx);
         [steer_param, t] = Diameter2SteerDirection(current_dia, idx);
         
-        if (toc - prev_instruction > 2*t)
+        if (toc - prev_instruction > idx_increment*t)
             fprintf('@t = %.2f: Calculated a diameter of %.2f m and a steering param of %d\n', ...
                         toc, current_dia, round(steer_param));
             if (~demo_drive)
@@ -116,7 +117,12 @@ while true
                 end
             else
                 prev_instruction = toc;
-                idx = idx + 1;
+                if (idx + 1 == nav_steps)
+                    idx_increment = 1;
+                else
+                    idx_increment = 2;
+                end
+                idx = idx + idx_increment;
             end
         end
     end
@@ -202,8 +208,8 @@ global perimeter location loc_index demo_record;
         end
     else
         if (record_started && toc - start_rec > Trec)
-            x = x_nav(idx*2-1);
-            y = y_nav(idx*2-1);
+            x = x_nav(idx);
+            y = y_nav(idx);
             z = 0;
 
             location(loc_index, :) = [x, y];
