@@ -19,7 +19,6 @@ function [page, Trec, Tbeacon] = start_cancer_recording(demo_mode, KITT)
         % Set up beacon
         page = start_record(Fs, sampleCount);
 
-        tic;
         % Turn on beacon
         KITT.toggleBeacon(true);
     else

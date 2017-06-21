@@ -109,10 +109,9 @@ while true
                     break;
                 else
                     status.last_instruction = true;
-                    status.prev_instr_t = toc;
+                    idx_increment = 1;
                 end
             else
-                status.prev_instr_t = toc;
                 if (idx + 1 == nav_steps)
                     idx_increment = 1;
                 else
@@ -120,6 +119,7 @@ while true
                 end
                 idx = idx + idx_increment;
             end
+            status.prev_instr_t = status.prev_instr_t + idx_increment*t;
         end
     end
     
