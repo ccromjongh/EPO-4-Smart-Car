@@ -214,7 +214,8 @@ while true
         play(train);
         pause(5);
         if extra_location
-            end_location = final_location; 
+            end_location = final_location;
+            start_angle = abs_ang_nav(end);
             extra_location = [];
         else
            break; 
