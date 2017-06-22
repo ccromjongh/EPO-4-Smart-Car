@@ -1,4 +1,4 @@
-global perimeter location field_data loc_index demo_record demo_drive Trec Tbeacon x_nav y_nav processing_timer Fs log_file;
+global train perimeter location field_data loc_index demo_record demo_drive Trec Tbeacon x_nav y_nav processing_timer Fs log_file;
 
 demo_record = true;
 demo_drive = true;
@@ -7,6 +7,9 @@ demo_drive = true;
 JSON = fileread('field_K.json');
 field_data = jsondecode(JSON);
 clear JSON;
+
+load 'train'
+train = audioplayer(y,Fs);
 
 %delete('log.txt');
 log_file = fopen('log.txt', 'w');
@@ -31,6 +34,7 @@ r1 = 0.2;   % Vertex length
 % Set start and end location
 start_location = [1.52 -2.275];
 start_angle = pi/2;
+extra_location = [];
 final_location = [-1.525 1.275];
 
 % Plot the field
@@ -56,12 +60,17 @@ tic;
 printImportantMessage('Starting control loop\n', log_file);
 
 while true
+    if extra_location
+        end_location = extra_location;
+    else
+        end_location = final_location;
+    end
 	% Initial path
-    [x_nav, y_nav, ang_nav, success, abs_ang_nav] = main(location(loc_index, :), start_angle, final_location, perimeter);
+   [x_nav, y_nav, ang_nav, success, abs_ang_nav] = main(location(loc_index, :), start_angle, end_location, perimeter);
     nav_steps = length(ang_nav);
     printLogMessage('Path found, proceding to controlling KITT\n', log_file);
     
-    plot_route(x_nav, y_nav, location(loc_index, :), final_location);
+    plot_route(x_nav, y_nav, location(loc_index, :), end_location);
 
     % Find array of radii from angles given by the navigator
     radius_arr = 0.5 * r1 * tan(0.5 * (pi - ang_nav));
@@ -147,14 +156,21 @@ while true
     end
     
     % If within 30 cm of final location, break & brake
-    final_radius = coord_radius(final_location, location(loc_index,:));
+    final_radius = coord_radius(end_location, location(loc_index,:));
     printImportantMessage(sprintf('Final radius is %.2f\n', final_radius), log_file);
     if (final_radius < 0.3)
         if (~demo_drive)
             KITT.setMotorSpeed(15);
         end
         printLogMessage('YEAH Arrived at the destination\n\n', log_file);
-        break; 
+        play(train);
+        pause(5);
+        if extra_location
+            end_location = final_location; 
+            extra_location = [];
+        else
+           break; 
+        end
     else
         printLogMessage('Almost there I have to retry\n\n', log_file);
     end
@@ -174,7 +190,7 @@ function rad = coord_radius (arr1, arr2)
     rad = sqrt(sum((arr1 - arr2).^2));
 end
 
-function plot_route(x_nav, y_nav, start_location, final_location)
+function plot_route(x_nav, y_nav, start_location, end_location)
     global perimeter;
     
     figure();
@@ -186,7 +202,7 @@ function plot_route(x_nav, y_nav, start_location, final_location)
     p.LineWidth = 1.5;
     p.MarkerSize = 8;
     
-    p = plot(final_location(1), final_location(2), 'o');
+    p = plot(end_location(1), end_location(2), 'o');
     p.LineWidth = 1.5;
     p.MarkerSize = 8;
     
