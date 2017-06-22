@@ -67,7 +67,7 @@ while true
         end_location = final_location;
     end
 	% Initial path
-   [x_nav, y_nav, ang_nav, success, abs_ang_nav] = main(location(loc_index, :), start_angle, end_location, perimeter);
+    [x_nav, y_nav, ang_nav, success, abs_ang_nav] = main(location(loc_index, :), start_angle, end_location, perimeter);
     nav_steps = length(ang_nav);
     printLogMessage('Path found, proceding to controlling KITT\n', log_file);
     
@@ -115,7 +115,7 @@ while true
         if (new_data)
             % Only when location is valid, and not too close to the endpoint
             if ((coord_radius(location(loc_index, :), [x_nav(idx), y_nav(idx)]) < 0.5) && ...
-                (coord_radius(final_location, location(loc_index,:)) > 0.4) && (re_path.prev_rec_t > 0))
+                (coord_radius(end_location, location(loc_index,:)) > 0.4) && (re_path.prev_rec_t > 0))
             
                 re_path.prev_rec_t = re_path.rec_started_t;
                 re_path.prev_location = re_path.current_location;
@@ -130,12 +130,12 @@ while true
                 printLogMessage(sprintf('\nEstimation: [%.2f, %.2f]; theta = %.3f\n', estimation(1), estimation(2), theta), ...
                     log_file);
                 
-                [x_nav_new, y_nav_new, ang_nav_new, success, abs_ang_nav_new] = main(estimation, theta, final_location, perimeter);
+                [x_nav_new, y_nav_new, ang_nav_new, success, abs_ang_nav_new] = main(estimation, theta, end_location, perimeter);
                 
                 % Only use new route if it actually worked
                 if (success)
                     printLogMessage('\nSuccesfully corrected the path\n', log_file);
-                    plot_route(x_nav, y_nav, location(loc_index, :), final_location);
+                    plot_route(x_nav, y_nav, location(loc_index, :), end_location);
                     
                     x_nav = x_nav_new;
                     y_nav = y_nav_new;
