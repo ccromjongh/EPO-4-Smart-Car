@@ -124,8 +124,8 @@ while true
                 re_path.current_location(:) = location(loc_index,:);
                 
                 td = toc + 0.5*Tbeacon - re_path.prev_rec_t;
-                [estimation, theta] = last_location(re_path.current_location, re_path.prev_location, td);
-                theta = (theta + abs_ang_nav(idx)) / 2;
+                [estimation, theta1] = last_location(re_path.current_location, re_path.prev_location, td);
+                theta = (theta1 + abs_ang_nav(idx)) / 2;
                 
                 printLogMessage(sprintf('\nEstimation: [%.2f, %.2f]; theta = %.3f\n', estimation(1), estimation(2), theta), ...
                     log_file);
@@ -133,7 +133,7 @@ while true
                 [x_nav_new, y_nav_new, ang_nav_new, success, abs_ang_nav_new] = main(estimation, theta, end_location, perimeter);
                 
                 % Only use new route if it actually worked
-                if (success)
+                if (success && (abs(theta - theta1) < pi/6))
                     printLogMessage('\nSuccesfully corrected the path\n', log_file);
                     plot_route(x_nav, y_nav, location(loc_index, :), end_location);
                     

@@ -1,135 +1,92 @@
 
-@t = 0.13: Starting control loop
-@t = 0.13: Path found, proceding to controlling KITT
-@t = 0.37: Set motorspeed to 23
-@t = 0.37: Start recording n. 1
-@t = 0.60: Location should be x: 1.52	y: -2.27	z: 0.00 meter
-@t = 0.61: 
-Estimation: [1.97, -2.27]; theta = 0.785
-@t = 0.61: 
+@t = 0.80: Starting control loop
+@t = 0.82: Path found, proceding to controlling KITT
+@t = 1.46: Set motorspeed to 23
+@t = 1.50: Start recording n. 1
+@t = 1.62: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
+@t = 1.74: Instruction 2	Calculated diameter: -1.65 m	Steering param: 50
+@t = 1.78: Instruction 3	Calculated diameter: -1.65 m	Steering param: 50
+@t = 1.79: Location should be x: 1.26	y: -1.75	z: 0.00 meter
+@t = 1.83: 
+Estimation: [1.30, -1.83]; theta = 2.134
+@t = 1.84: 
 Succesfully corrected the path
-@t = 0.85: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 0.86: Start recording n. 2
-@t = 1.08: Location should be x: 2.07	y: -2.10	z: 0.00 meter
-@t = 1.09: 
-Estimation: [1.95, -2.14]; theta = 0.663
-@t = 1.09: 
-Succesfully corrected the path
-@t = 1.37: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 1.38: Start recording n. 3
-@t = 1.61: Location should be x: 2.08	y: -1.98	z: 0.00 meter
-@t = 1.61: 
-Estimation: [2.08, -1.65]; theta = 1.233
-@t = 1.61: 
-Succesfully corrected the path
-@t = 1.85: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 1.86: Start recording n. 4
-@t = 2.09: Location should be x: 2.10	y: -1.45	z: 0.00 meter
-@t = 2.09: 
-Estimation: [2.09, -1.54]; theta = 1.502
-@t = 2.10: 
-Succesfully corrected the path
-@t = 2.34: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 2.35: Start recording n. 5
-@t = 2.58: Location should be x: 2.06	y: -1.34	z: 0.00 meter
+@t = 2.32: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
+@t = 2.36: Start recording n. 2
+@t = 2.59: Location should be x: 1.17	y: -1.68	z: 0.00 meter
 @t = 2.60: 
-Estimation: [1.95, -1.02]; theta = 1.815
+Estimation: [0.90, -1.46]; theta = 2.357
 @t = 2.61: 
 Succesfully corrected the path
-@t = 2.86: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 2.88: Start recording n. 6
-@t = 3.10: Location should be x: 1.86	y: -0.84	z: 0.00 meter
-@t = 3.10: 
-Estimation: [1.89, -0.92]; theta = 2.003
-@t = 3.10: 
+@t = 3.16: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
+@t = 3.21: Start recording n. 3
+@t = 3.45: Location should be x: 0.76	y: -1.32	z: 0.00 meter
+@t = 3.46: 
+Estimation: [0.83, -1.38]; theta = 2.390
+@t = 3.46: 
 Succesfully corrected the path
-@t = 3.33: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 3.34: Start recording n. 7
-@t = 3.56: Location should be x: 1.77	y: -0.77	z: 0.00 meter
-@t = 3.56: 
-Estimation: [1.51, -0.56]; theta = 2.359
-@t = 3.57: 
+@t = 4.07: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
+@t = 4.10: Start recording n. 4
+@t = 4.34: Instruction 2	Calculated diameter: 0.00 m	Steering param: 6
+@t = 4.34: Location should be x: 0.54	y: -1.11	z: 0.00 meter
+@t = 4.35: 
+Estimation: [0.42, -0.99]; theta = 2.384
+@t = 4.35: 
 Succesfully corrected the path
-@t = 3.79: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 3.80: Start recording n. 8
-@t = 4.03: Location should be x: 1.35	y: -0.44	z: 0.00 meter
-@t = 4.03: 
-Estimation: [1.42, -0.49]; theta = 2.477
-@t = 4.03: 
+@t = 4.77: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
+@t = 4.80: Start recording n. 5
+@t = 4.97: Instruction 2	Calculated diameter: 0.00 m	Steering param: 6
+@t = 5.04: Location should be x: 0.13	y: -0.72	z: 0.00 meter
+@t = 5.08: 
+Estimation: [0.20, -0.78]; theta = 2.384
+@t = 5.09: 
 Succesfully corrected the path
-@t = 4.26: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 4.27: Start recording n. 9
-@t = 4.50: Location should be x: 1.25	y: -0.38	z: 0.00 meter
-@t = 4.50: 
-Estimation: [0.97, -0.20]; theta = 2.560
-@t = 4.50: 
+@t = 5.72: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
+@t = 5.76: Start recording n. 6
+@t = 5.81: Instruction 2	Calculated diameter: 0.00 m	Steering param: 6
+@t = 5.86: Instruction 3	Calculated diameter: 0.00 m	Steering param: 6
+@t = 6.01: Instruction 4	Calculated diameter: 0.00 m	Steering param: 6
+@t = 6.01: Location should be x: -0.38	y: -0.23	z: 0.00 meter
+@t = 6.01: 
+Estimation: [-0.21, -0.40]; theta = 2.384
+@t = 6.02: 
 Succesfully corrected the path
-@t = 4.73: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 4.74: Start recording n. 10
-@t = 4.96: Instruction 2	Calculated diameter: 0.00 m	Steering param: 6
-@t = 4.96: Location should be x: 0.64	y: 0.02	z: 0.00 meter
-@t = 4.97: 
-Estimation: [0.87, -0.13]; theta = 2.565
-@t = 4.97: 
+@t = 6.65: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
+@t = 6.68: Start recording n. 7
+@t = 6.74: Instruction 2	Calculated diameter: 0.00 m	Steering param: 6
+@t = 6.84: Instruction 3	Calculated diameter: 0.00 m	Steering param: 6
+@t = 6.91: Location should be x: -0.65	y: 0.02	z: 0.00 meter
+@t = 6.91: 
+Estimation: [-0.71, 0.08]; theta = 2.384
+@t = 6.92: 
 Succesfully corrected the path
-@t = 5.20: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 5.21: Start recording n. 11
-@t = 5.44: Location should be x: 0.70	y: -0.03	z: 0.00 meter
-@t = 5.44: 
-Estimation: [0.98, -0.27]; theta = 0.957
-@t = 5.44: 
+@t = 7.67: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
+@t = 7.70: Start recording n. 8
+@t = 7.76: Instruction 2	Calculated diameter: 6.63 m	Steering param: -3
+@t = 7.80: Instruction 3	Calculated diameter: 0.00 m	Steering param: 6
+@t = 7.93: Location should be x: -1.11	y: 0.52	z: 0.00 meter
+@t = 7.93: 
+Estimation: [-0.95, 0.35]; theta = 2.288
+@t = 7.93: 
 Succesfully corrected the path
-@t = 5.67: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 5.68: Start recording n. 12
-@t = 5.90: Location should be x: 1.05	y: -0.09	z: 0.00 meter
-@t = 5.90: 
-Estimation: [1.14, -0.10]; theta = 0.523
-@t = 5.91: 
+@t = 8.57: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
+@t = 8.60: Start recording n. 9
+@t = 8.65: Instruction 2	Calculated diameter: 0.00 m	Steering param: 6
+@t = 8.78: Instruction 3	Calculated diameter: 6.63 m	Steering param: -3
+@t = 8.83: Location should be x: -1.31	y: 0.82	z: 0.00 meter
+@t = 8.83: 
+Estimation: [-1.37, 0.90]; theta = 2.169
+@t = 8.83: 
 Succesfully corrected the path
-@t = 6.14: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 6.15: Start recording n. 13
-@t = 6.37: Location should be x: 1.29	y: 0.04	z: 0.00 meter
-@t = 6.37: 
-Estimation: [1.45, 0.12]; theta = 0.626
-@t = 6.37: 
-Succesfully corrected the path
-@t = 6.61: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 6.62: Start recording n. 14
-@t = 6.84: Location should be x: 1.58	y: 0.28	z: 0.00 meter
-@t = 6.85: 
-Estimation: [1.63, 0.32]; theta = 0.777
-@t = 6.85: 
-Succesfully corrected the path
-@t = 7.08: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 7.08: Start recording n. 15
-@t = 7.31: Location should be x: 1.74	y: 0.49	z: 0.00 meter
-@t = 7.31: 
-Estimation: [1.84, 0.63]; theta = 0.974
-@t = 7.31: 
-Succesfully corrected the path
-@t = 7.54: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 7.55: Start recording n. 16
-@t = 7.78: Location should be x: 1.91	y: 0.82	z: 0.00 meter
-@t = 7.78: 
-Estimation: [1.95, 0.89]; theta = 1.148
-@t = 7.78: 
-Succesfully corrected the path
-@t = 8.02: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 8.03: Start recording n. 17
-@t = 8.26: Location should be x: 1.98	y: 1.08	z: 0.00 meter
-@t = 8.26: 
-Estimation: [2.03, 1.25]; theta = 1.348
-@t = 8.26: 
-Succesfully corrected the path
-@t = 8.49: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 8.50: Start recording n. 18
-@t = 8.73: Location should be x: 2.03	y: 1.45	z: 0.00 meter
-@t = 8.73: 
-Estimation: [2.03, 1.53]; theta = 1.523
-@t = 8.73: 
-Succesfully corrected the path
-@t = 8.96: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
-@t = 8.97: Start recording n. 19
-@t = 9.19: Location should be x: 2.00	y: 1.72	z: 0.00 meter
-@t = 9.19: 
-Estimation: [1.98, 1.90]; theta = 1.723
+@t = 9.52: Instruction 1	Calculated diameter: 0.00 m	Steering param: 6
+@t = 9.55: Start recording n. 10
+@t = 9.60: Instruction 2	Calculated diameter: 3.31 m	Steering param: -14
+@t = 9.79: Instruction 3	Calculated diameter: 6.63 m	Steering param: -3
+@t = 9.79: Location should be x: -1.54	y: 1.26	z: 0.00 meter
+@t = 9.84: Start recording n. 11
+@t = 9.98: Instruction 3	Calculated diameter: 6.63 m	Steering param: -3
+@t = 10.06: Location should be x: -1.54	y: 1.26	z: 0.00 meter
+
+@t = 10.11: Final radius is 0.02
+@t = 10.11: YEAH Arrived at the destination
+
