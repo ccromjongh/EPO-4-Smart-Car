@@ -13,6 +13,7 @@ KITT.toggleBeacon(false);
 KITT.setupBeacon(15000, 5000, 10, '983BD2C4');
 KITT.toggleBeacon(true);
 pause(1);
+KITT.toggleBeacon(false);
 
 
 % KITT.toggleBeacon(false);

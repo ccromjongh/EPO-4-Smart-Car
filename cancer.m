@@ -1,10 +1,10 @@
-global train perimeter location field_data loc_index demo_record demo_drive Trec Tbeacon x_nav y_nav processing_timer Fs log_file;
+global train perimeter location field_data loc_index demo_record demo_drive Trec Tbeacon x_nav y_nav processing_timer Fs log_file KITT  start_location end_location;
 
-demo_record = true;
-demo_drive = true;
+demo_record = false;
+demo_drive = false;
 
 %% Setup
-JSON = fileread('field_K.json');
+JSON = fileread('field.json');
 field_data = jsondecode(JSON);
 clear JSON;
 
@@ -24,7 +24,7 @@ if (~demo_drive)
 
     % Setup the beacon
     load audiodata_96k2.mat;
-    KITT.setupBeacon(Timer0, Timer1, Timer3, code);
+    %KITT.setupBeacon(Timer0, Timer1, Timer3, code);
 end
 if (~demo_record); initialise_audio_box(Fs, true); end
 
@@ -32,10 +32,14 @@ r1 = 0.2;   % Vertex length
 %p = gcp();  % Parrallel pool
 
 % Set start and end location
-start_location = [1.52 -2.275];
-start_angle = pi/2;
+% start_location = [1.52 -2.275];
+% final_location = [-1.525 1.275];
+% start_angle = pi/2;
+
 extra_location = [];
-final_location = [-1.525 1.275];
+% start_location = [0.755 1.03];
+% final_location = [-1.525 1.275];
+% start_angle = -2.9030;
 
 % Plot the field
 distance = zeros(1,5);
@@ -45,6 +49,8 @@ playfield_plot(distance, mic, 100*start_location(1), 100*start_location(2), fiel
 
 perimeter = [field_data.field.x_min,field_data.field.x_max,field_data.field.y_min,field_data.field.y_max]/100;
 
+jemoeder = true;
+
 % Do allocation for the location array
 loc_index = 1;
 location = zeros(1000, 2);
@@ -53,7 +59,7 @@ location(loc_index, :) = start_location;
 status = struct('prev_instr_t', 0.0, 'rec_started_t', -1.0, 'beacon', false, 'record_index', 1, 'last_instruction', false);
 processing_timer = struct('start', 0, 'end', 0, 'time', []);
 instruction_timer = [];
-re_path = struct('rec_started_t', 0.0, 'prev_rec_t', 0.0, 'prev_location', start_location, 'current_location', start_location, 'offset', 0, 'reset_timer', false);
+re_path = struct('rec_started_t', 0.0, 'prev_rec_t', 0.0, 'prev_location', start_location, 'current_location', start_location, 'offset', 0, 'reset_timer', false, 'first', true);
 
 %% Control loop
 
@@ -67,8 +73,9 @@ while true
         end_location = final_location;
     end
 	% Initial path
-    [x_nav, y_nav, ang_nav, success, abs_ang_nav] = main(location(loc_index, :), start_angle, end_location, perimeter);
+    [x_nav, y_nav, ang_nav, success, abs_ang_nav] = main(start_location, start_angle, end_location, perimeter);
     nav_steps = length(ang_nav);
+    re_path.first = true;
     printLogMessage('Path found, proceding to controlling KITT\n', log_file);
     
     plot_route(x_nav, y_nav, location(loc_index, :), end_location);
@@ -79,9 +86,9 @@ while true
     radius_arr(radius_arr > 1E6) = 0;
     Diameter = 2*radius_arr;
     
-    printInstructionMessage('Set motorspeed to 23\n', log_file);
+    printInstructionMessage('Set motorspeed to 25\n', log_file);
     if (~demo_drive)
-        KITT.setMotorSpeed(23);
+        KITT.setMotorSpeed(25);
     end
     
     idx = 1;
@@ -111,59 +118,61 @@ while true
         
         [status, new_data] = endOfRecord(page, nchan, status, idx);
         
-        %
-        if (new_data)
-            % Only when location is valid, and not too close to the endpoint
-            if ((coord_radius(location(loc_index, :), [x_nav(idx), y_nav(idx)]) < 0.5) && ...
-                (coord_radius(end_location, location(loc_index,:)) > 0.4) && (re_path.prev_rec_t > 0))
-            
-                re_path.prev_rec_t = re_path.rec_started_t;
-                re_path.prev_location = re_path.current_location;
-                
-                re_path.rec_started_t = status.rec_started_t;
-                re_path.current_location(:) = location(loc_index,:);
-                
-                td = toc + 0.5*Tbeacon - re_path.prev_rec_t;
-                [estimation, theta1] = last_location(re_path.current_location, re_path.prev_location, td);
-                theta = (theta1 + abs_ang_nav(idx)) / 2;
-                
-                printLogMessage(sprintf('\nEstimation: [%.2f, %.2f]; theta = %.3f\n', estimation(1), estimation(2), theta), ...
-                    log_file);
-                
-                [x_nav_new, y_nav_new, ang_nav_new, success, abs_ang_nav_new] = main(estimation, theta, end_location, perimeter);
-                
-                % Only use new route if it actually worked
-                if (success && (abs(theta - theta1) < pi/6))
-                    printLogMessage('\nSuccesfully corrected the path\n', log_file);
-                    plot_route(x_nav, y_nav, location(loc_index, :), end_location);
-                    
-                    x_nav = x_nav_new;
-                    y_nav = y_nav_new;
-                    ang_nav = ang_nav_new;
-                    abs_ang_nav = abs_ang_nav_new;
-                    clear x_nav_new y_nav_new ang_nav_new abs_ang_nav_new;
-                    
-                    re_path.offset = re_path.offset + idx - 1;
-                    idx = 1;
-
-                    % Find array of radii from angles given by the navigator
-                    radius_arr = 0.5 * r1 * tan(0.5 * (pi - ang_nav));
-                    % Filter out infinite measurements
-                    radius_arr(radius_arr > 1E6) = 0;
-                    Diameter = 2*radius_arr;
-                    
-                    nav_steps = length(ang_nav);
-                    
-                    % Make sure that instructions will be executed correctly
-                    re_path.reset_timer = true;
-                    status.prev_instr_t = toc;
-                end
-            else
-                useless = true;
-                clear useless;
-            end
-            
-        end
+        %{
+%         if (new_data)
+%             % Only when location is valid, and not too close to the endpoint
+%             if ((coord_radius(location(loc_index, :), [x_nav(idx), y_nav(idx)]) < 1) && ...
+%                 (coord_radius(end_location, location(loc_index,:)) > 0.4) && (re_path.prev_rec_t > 0))
+%             
+%                 re_path.prev_rec_t = re_path.rec_started_t;
+%                 re_path.prev_location = re_path.current_location;
+%                 
+%                 re_path.rec_started_t = status.rec_started_t;
+%                 re_path.current_location(:) = location(loc_index,:);
+%                 
+%                 td = toc + 0.5*Tbeacon - re_path.prev_rec_t;
+%                 [estimation, theta1] = last_location(re_path.current_location, re_path.prev_location, td);
+%                 theta = (theta1 + abs_ang_nav(idx)) / 2;
+%                 
+%                 printLogMessage(sprintf('\nEstimation: [%.2f, %.2f]; theta = %.3f\n', estimation(1), estimation(2), theta), ...
+%                     log_file);
+%                 
+%                 [x_nav_new, y_nav_new, ang_nav_new, success, abs_ang_nav_new] = main(estimation, theta, end_location, perimeter);
+%                 
+%                 % Only use new route if it actually worked
+%                 if (success && (abs(theta - theta1) < pi/6) && ~re_path.first)
+%                     printLogMessage('\nSuccesfully corrected the path\n', log_file);
+%                     plot_route(x_nav, y_nav, location(loc_index, :), end_location);
+%                     
+%                     re_path.first = false;
+%                     
+%                     x_nav = x_nav_new;
+%                     y_nav = y_nav_new;
+%                     ang_nav = ang_nav_new;
+%                     abs_ang_nav = abs_ang_nav_new;
+%                     clear x_nav_new y_nav_new ang_nav_new abs_ang_nav_new;
+%                     
+%                     re_path.offset = re_path.offset + idx - 1;
+%                     idx = 1;
+% 
+%                     % Find array of radii from angles given by the navigator
+%                     radius_arr = 0.5 * r1 * tan(0.5 * (pi - ang_nav));
+%                     % Filter out infinite measurements
+%                     radius_arr(radius_arr > 1E6) = 0;
+%                     Diameter = 2*radius_arr;
+%                     
+%                     nav_steps = length(ang_nav);
+%                     
+%                     % Make sure that instructions will be executed correctly
+%                     re_path.reset_timer = true;
+%                     status.prev_instr_t = toc;
+%                 end
+%             else
+%                 useless = true;
+%                 clear useless;
+%             end
+%             
+%         end
         %}
 
         % Set the steering direction
@@ -199,34 +208,37 @@ while true
         KITT.setMotorSpeed(0); pause(0.3); KITT.setMotorSpeed(15);
     end
     
-    while (status.rec_started_t >= 0)
+    while (jemoeder && status.rec_started_t >= 0)
+        jemoeder = false;
         [status, new_data] = endOfRecord(page, nchan, status, idx);
     end
     
     % If within 30 cm of final location, break & brake
     final_radius = coord_radius(end_location, location(loc_index,:));
     printImportantMessage(sprintf('Final radius is %.2f\n', final_radius), log_file);
-    if (final_radius < 0.3)
+    %if (final_radius < 0.4)
         if (~demo_drive)
             KITT.setMotorSpeed(15);
         end
         printLogMessage('YEAH Arrived at the destination\n\n', log_file);
-        play(train);
+        play(train)
         pause(5);
         if extra_location
+            start_location = end_location;
             end_location = final_location;
             start_angle = abs_ang_nav(end);
             extra_location = [];
         else
            break; 
         end
-    else
-        printLogMessage('Almost there I have to retry\n\n', log_file);
-    end
+%     else
+%         start_angle = abs_ang_nav(end);
+%         printLogMessage('Almost there I have to retry\n\n', log_file);
+%     end
 end
 
 if (~demo_drive)
-   KITT.closePort(); 
+   %KITT.closePort(); 
 end
 
 fclose(log_file);
@@ -264,21 +276,26 @@ end
 % Process record function
 function [status, new_data] = endOfRecord(page, nchan, status, idx)
 
-    global field_data location loc_index demo_record Trec x_nav y_nav processing_timer Fs log_file;
+    global field_data location loc_index demo_record Trec x_nav y_nav processing_timer Fs log_file KITT start_location end_location;
     new_data = false;
 
     if (~demo_record)
         if((status.rec_started_t >= 0) && playrec('isFinished'))
-            processing_timer.start = toc;
-            printRecordMessage(sprintf('Processing recording n. %d\n', status.record_index-1), log_file, true);
-            Hdist = process_cancer_recording(page, nchan, Fs);
-            [x, y, z] =  tdoa2([field_data.mics.x; field_data.mics.y; field_data.mics.z]', Hdist, Fs);
+            try
+                processing_timer.start = toc;
+                printRecordMessage(sprintf('Processing recording n. %d\n', status.record_index-1), log_file, true);
+                Hdist = process_cancer_recording(page, nchan, Fs);
+                
+                [x, y, z] =  tdoa2([field_data.mics.x; field_data.mics.y; field_data.mics.z]', Hdist, Fs);
             
-            x = x/100;
-            y = y/100;
-            z = z/100;
+                x = x/100;
+                y = y/100;
+                z = z/100;
             
-            new_data = true;
+                new_data = true;
+            catch
+                
+            end
         end
     else
         if ((status.rec_started_t >= 0) && (toc - status.rec_started_t > Trec))
@@ -301,6 +318,13 @@ function [status, new_data] = endOfRecord(page, nchan, status, idx)
         processing_timer.end = toc;
         
         processing_timer.time(end+1) = processing_timer.end - processing_timer.start;
+        
+        
+        final_radius = coord_radius(end_location, location(loc_index,:));
+        printImportantMessage(sprintf('Final radius is %.2f\n', final_radius), log_file);
+        if (final_radius < 0.4 && ~demo_drive)
+            KITT.setMotorSpeed(15);
+        end
         
         %{
         hold on; p = plot(x, y, '.');
