@@ -49,6 +49,7 @@ location(loc_index, :) = start_location;
 status = struct('prev_instr_t', 0.0, 'rec_started_t', -1.0, 'beacon', false, 'record_index', 1, 'last_instruction', false);
 processing_timer = struct('start', 0, 'end', 0, 'time', []);
 instruction_timer = [];
+re_path = struct('rec_started_t', 0.0, 'prev_rec_t', 0.0, 'prev_location', start_location, 'current_location', start_location, 'offset', 0, 'reset_timer', false);
 
 %% Control loop
 
@@ -76,6 +77,7 @@ while true
     
     idx = 1;
     status.last_instruction = false;
+    re_path.offset = 0;
     
     while true
         if (status.rec_started_t < 0)
@@ -85,6 +87,9 @@ while true
             status.rec_started_t = toc;
             %printBeaconMessage('Beacon turned on\n', log_file);
             status.beacon = true;
+            
+            if (re_path.prev_rec_t == 0); re_path.prev_rec_t = toc; end
+            re_path.rec_started_t = status.rec_started_t;
         end
         
         if (status.beacon && toc - status.rec_started_t > Tbeacon)
@@ -97,28 +102,71 @@ while true
         
         [status, new_data] = endOfRecord(page, nchan, status, idx);
         
-        %{
+        %
         if (new_data)
-            [estimation, theta] = last_location(location, loc_index, toc - processing_timer.end);
-            theta = (theta + abs_ang_nav(idx)) / 2;
-            [x_nav, y_nav, ang_nav, success] = main(estimation, theta, final_location, perimeter);
-            idx = 1;
+            % Only when location is valid, and not too close to the endpoint
+            if ((coord_radius(location(loc_index, :), [x_nav(idx), y_nav(idx)]) < 0.5) && ...
+                (coord_radius(final_location, location(loc_index,:)) > 0.4) && (re_path.prev_rec_t > 0))
             
-            % Find array of radii from angles given by the navigator
-            radius_arr = 0.5 * r1 * tan(0.5 * (pi - ang_nav));
-            % Filter out infinite measurements
-            radius_arr(radius_arr > 1E6) = 0;
-            Diameter = 2*radius_arr;
+                re_path.prev_rec_t = re_path.rec_started_t;
+                re_path.prev_location = re_path.current_location;
+                
+                re_path.rec_started_t = status.rec_started_t;
+                re_path.current_location(:) = location(loc_index,:);
+                
+                td = toc + 0.5*Tbeacon - re_path.prev_rec_t;
+                [estimation, theta] = last_location(re_path.current_location, re_path.prev_location, td);
+                theta = (theta + abs_ang_nav(idx)) / 2;
+                
+                printLogMessage(sprintf('\nEstimation: [%.2f, %.2f]; theta = %.3f\n', estimation(1), estimation(2), theta), ...
+                    log_file);
+                
+                [x_nav_new, y_nav_new, ang_nav_new, success, abs_ang_nav_new] = main(estimation, theta, final_location, perimeter);
+                
+                % Only use new route if it actually worked
+                if (success)
+                    printLogMessage('\nSuccesfully corrected the path\n', log_file);
+                    plot_route(x_nav, y_nav, location(loc_index, :), final_location);
+                    
+                    x_nav = x_nav_new;
+                    y_nav = y_nav_new;
+                    ang_nav = ang_nav_new;
+                    abs_ang_nav = abs_ang_nav_new;
+                    clear x_nav_new y_nav_new ang_nav_new abs_ang_nav_new;
+                    
+                    re_path.offset = re_path.offset + idx - 1;
+                    idx = 1;
+
+                    % Find array of radii from angles given by the navigator
+                    radius_arr = 0.5 * r1 * tan(0.5 * (pi - ang_nav));
+                    % Filter out infinite measurements
+                    radius_arr(radius_arr > 1E6) = 0;
+                    Diameter = 2*radius_arr;
+                    
+                    nav_steps = length(ang_nav);
+                    
+                    % Make sure that instructions will be executed correctly
+                    re_path.reset_timer = true;
+                    status.prev_instr_t = toc;
+                end
+            else
+                useless = true;
+                clear useless;
+            end
+            
         end
         %}
 
         % Set the steering direction
         current_dia = Diameter(idx);
-        [steer_param, t] = Diameter2SteerDirection(current_dia, idx);
+        [steer_param, t] = Diameter2SteerDirection(current_dia, idx + re_path.offset);
         
-        if (toc - status.prev_instr_t > t)
+        if ((toc - status.prev_instr_t > t) || re_path.reset_timer)
             printInstructionMessage(sprintf('Instruction %d\tCalculated diameter: %.2f m\tSteering param: %d\n', ...
                         idx, current_dia, round(steer_param)), log_file);
+            
+            re_path.reset_timer = false;
+            
             if (~demo_drive)
                 KITT.setSteerDirection(steer_param);
             end
@@ -143,7 +191,7 @@ while true
     end
     
     while (status.rec_started_t >= 0)
-        status = endOfRecord(page, nchan, status, idx);
+        [status, new_data] = endOfRecord(page, nchan, status, idx);
     end
     
     % If within 30 cm of final location, break & brake
