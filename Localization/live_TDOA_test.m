@@ -7,18 +7,18 @@ min_distance = 50;
 checkpoint = 1;
 Vs = 340.29;
 latency = 0.05;
-demo_mode = true;
+demo_mode = false;
 KITT = testClass;
 algorithm = 2;
 
 plotstuff = false;
 
-p = gcp('nocreate'); % If no pool, do not create new one.
-if isempty(p)
-    p = gcp();
-end
+% p = gcp('nocreate'); % If no pool, do not create new one.
+% if isempty(p)
+%     p = gcp();
+% end
 
-JSON = fileread('field_K.json');
+JSON = fileread('field.json');
 field_data = jsondecode(JSON);
 clear JSON;
 
